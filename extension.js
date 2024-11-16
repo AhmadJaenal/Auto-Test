@@ -28,6 +28,21 @@ async function showMyTask() {
 		vscode.window.showInformationMessage('No item selected');
 	}
 }
+async function selectCode() {
+	const editor = vscode.window.activeTextEditor;
+	if (!editor) {
+		vscode.window.showErrorMessage('No active editor found');
+		return;
+	}
+
+	const selection = editor.selection;
+	const selectedText = editor.document.getText(selection);
+	if (!selectedText) {
+		vscode.window.showErrorMessage('No text selected');
+		return;
+	}
+	vscode.window.showInformationMessage(`Selected text:${selectedText}`);
+}
 
 module.exports = {
 	activate,
