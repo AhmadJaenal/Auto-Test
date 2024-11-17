@@ -8,13 +8,7 @@ function activate(context) {
 	let showDataList = vscode.commands.registerCommand('auto-unit-test.showMyTask', async () => {
 		await showMyTask();
 	});
-
-	let selectedText = vscode.commands.registerCommand('auto-unit-test.selectedCode', async () => {
-		await selectCode();
-	})
-
 	context.subscriptions.push(showDataList);
-	context.subscriptions.push(selectedText);
 }
 
 async function showMyTask() {
@@ -27,12 +21,12 @@ async function showMyTask() {
 		'Tugas membuat fitur delete komentar',
 	];
 	const selectedItem = await vscode.window.showQuickPick(dataList, {
-		placeHolder: 'Select an item'
+		placeHolder: 'Pilih tugas yang akan dilaporkan'
 	})
 	if (selectedItem) {
-		vscode.window.showInformationMessage(`You selected: ${selectedItem}`);
+		await selectCode();
 	} else {
-		vscode.window.showInformationMessage('No item selected');
+		vscode.window.showInformationMessage('Tidak ada yang dipilih');
 	}
 }
 
@@ -46,9 +40,22 @@ async function selectCode() {
 	const selection = editor.selection;
 	const selectedText = editor.document.getText(selection);
 	if (!selectedText) {
-		vscode.window.showErrorMessage('No text selected');
+		vscode.window.showErrorMessage('Tidak ada code yang akan dilaporkan');	
 		return;
 	}
+
+	const escapedText = escapeHtml(selectedText);
+
+	const panel = vscode.window.createWebviewPanel(
+		'createTestPanel', 
+		'Laporan Tugas',
+		vscode.ViewColumn.One, 
+		{}
+	);
+
+	panel.webview.html = getWebviewContent(escapedText);
+}
+
 function getWebviewContent(code) {
     return `<!DOCTYPE html>
     <html lang="en">

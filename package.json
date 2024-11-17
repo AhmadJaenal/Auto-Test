@@ -18,10 +18,6 @@
       {
         "command": "auto-unit-test.showMyTask",
         "title": "Show My Task"
-      },
-      {
-        "command": "auto-unit-test.selectedCode",
-        "title": "Select Code"
       }
     ]
   },
