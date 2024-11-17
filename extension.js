@@ -1,14 +1,21 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 const vscode = require('vscode');
-
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
+
+	let showDataList = vscode.commands.registerCommand('auto-unit-test.showMyTask', async () => {
+		await showMyTask();
+	});
+
+	let selectedText = vscode.commands.registerCommand('auto-unit-test.selectedCode', async () => {
+		await selectCode();
+	})
+
+	context.subscriptions.push(showDataList);
+	context.subscriptions.push(selectedText);
+}
 
 async function showMyTask() {
 	const dataList = [
@@ -28,6 +35,7 @@ async function showMyTask() {
 		vscode.window.showInformationMessage('No item selected');
 	}
 }
+
 async function selectCode() {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
@@ -43,6 +51,8 @@ async function selectCode() {
 	}
 	vscode.window.showInformationMessage(`Selected text:${selectedText}`);
 }
+
+function deactivate() { }
 
 module.exports = {
 	activate,
