@@ -30,6 +30,11 @@ async function showMyTask() {
 	}
 }
 
+function getFileType(document) {
+	const openedFileType = document.uri.fsPath.split('.').pop();
+	return openedFileType;
+}
+
 async function selectCode() {
 	const editor = vscode.window.activeTextEditor;
 	if (!editor) {
@@ -39,6 +44,7 @@ async function selectCode() {
 
 	const selection = editor.selection;
 	const selectedText = editor.document.getText(selection);
+	const fileType = getFileType(editor.document);
 	if (!selectedText) {
 		vscode.window.showErrorMessage('Tidak ada code yang akan dilaporkan');	
 		return;
@@ -53,10 +59,12 @@ async function selectCode() {
 		{}
 	);
 
-	panel.webview.html = getWebviewContent(escapedText);
+	panel.webview.html = getWebviewContent(escapedText, fileType);
 }
 
-function getWebviewContent(code) {
+
+
+function getWebviewContent(code, fileType) {
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
@@ -71,6 +79,7 @@ function getWebviewContent(code) {
     <body>
         <h1>Laporan Tugas</h1>
         <pre><code>${code}</code></pre>
+        <pre>File Type ${fileType}</pre>
     </body>
     </html>`;
 }
