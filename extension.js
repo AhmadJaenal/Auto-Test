@@ -34,6 +34,23 @@ function getFileType(document) {
 	const openedFileType = document.uri.fsPath.split('.').pop();
 	return openedFileType;
 }
+function isController(fileName, code) {
+	const regexController = /controller/i;
+	const regexPublicFunction = /public\s+function/i;
+
+	return (
+		regexController.test(fileName) ||
+		(code && (regexController.test(code) || regexPublicFunction.test(code)))
+	);
+}
+
+async function analyzeCode(code, fileName) {
+	if (isController(fileName, code)) {
+		vscode.window.showInformationMessage('Code berikut adalah:', isController(fileName, code));
+	} else {
+		vscode.window.showInformationMessage('Code tidak terdeteksi');
+	}
+}
 
 async function selectCode() {
 	const editor = vscode.window.activeTextEditor;
