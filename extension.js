@@ -8,58 +8,80 @@ const path = require('path');
  */
 function activate(context) {
 
-	let showDataList = vscode.commands.registerCommand('auto-unit-test.showMyTask', async () => {
-		await showMyTask();
-	});
+    askForApiKey();
 
-	context.subscriptions.push(showDataList);
+    let showDataList = vscode.commands.registerCommand('auto-unit-test.showMyTask', async () => {
+        await showMyTask();
+    });
+
+    context.subscriptions.push(showDataList);
+}
+
+async function askForApiKey() {
+    const config = vscode.workspace.getConfiguration('auto-unit-test');
+    let apiKey = config.get('apiKey');
+
+    if (!apiKey) {
+        const input = await vscode.window.showInputBox({
+            placeHolder: 'Masukan API KEY',
+            prompt: 'API KEY wajib isi'
+        });
+
+        if (input) {
+            await vscode.workspace.getConfiguration('auto-unit-test').update('apiKey', input, vscode.ConfigurationTarget.Global);
+        } else {
+            vscode.window.showErrorMessage('API KEY wajib ada');
+        }
+    } else {
+        vscode.window.showInformationMessage('API KEY saat ini');
+    }
 }
 
 async function showMyTask() {
-	const dataList = [
-		'Tugas membuat fitur login user',
-		'Tugas membuat fitur registrasi user',
-		'Tugas membuat fitur update profil user',
-		'Tugas membuat fitur upload gambar',
-		'Tugas membuat fitur reset password',
-		'Tugas membuat fitur delete komentar',
-	];
-	const selectedItem = await vscode.window.showQuickPick(dataList, {
-		placeHolder: 'Pilih tugas yang akan dilaporkan'
-	})
-	if (selectedItem) {
-		await selectCode();
-	} else {
-		vscode.window.showInformationMessage('Tidak ada yang dipilih');
-	}
+    const dataList = [
+        'Tugas membuat fitur login user',
+        'Tugas membuat fitur registrasi user',
+        'Tugas membuat fitur update profil user',
+        'Tugas membuat fitur upload gambar',
+        'Tugas membuat fitur reset password',
+        'Tugas membuat fitur delete komentar',
+    ];
+    const selectedItem = await vscode.window.showQuickPick(dataList, {
+        placeHolder: 'Pilih tugas yang akan dilaporkan'
+    })
+    if (selectedItem) {
+        await selectCode();
+    } else {
+        vscode.window.showInformationMessage('Tidak ada yang dipilih');
+    }
 }
 
 function getFileType(document) {
-	const openedFileType = document.uri.fsPath.split('.').pop();
-	return openedFileType;
+    const openedFileType = document.uri.fsPath.split('.').pop();
+    return openedFileType;
 }
 
 function isController(fileName, code) {
-	const regexController = /controller/i;
-	const regexPublicFunction = /public\s+function/i;
+    const regexController = /controller/i;
+    const regexPublicFunction = /public\s+function/i;
 
-	return (
-		regexController.test(fileName) ||
-		(code && (regexController.test(code) || regexPublicFunction.test(code)))
-	);
+    return (
+        regexController.test(fileName) ||
+        (code && (regexController.test(code) || regexPublicFunction.test(code)))
+    );
 }
 
 async function analyzeCode(code, fileName) {
-	if (isController(fileName, code)) {
-		vscode.window.showInformationMessage('Code berikut adalah:', isController(fileName, code));
-		const outputChannel = vscode.window.createOutputChannel('Laravel Code Analyzer');
+    if (isController(fileName, code)) {
+        vscode.window.showInformationMessage('Code berikut adalah:', isController(fileName, code));
+        const outputChannel = vscode.window.createOutputChannel('Laravel Code Analyzer');
         outputChannel.show();
-		executeController(code, outputChannel);
+        executeController(code, outputChannel);
 
         createUserFactory();
-	} else {
-		vscode.window.showInformationMessage('Code tidak terdeteksi');
-	}
+    } else {
+        vscode.window.showInformationMessage('Code tidak terdeteksi');
+    }
 }
 
 async function executeController(code, outputChannel) {
@@ -75,7 +97,7 @@ async function executeController(code, outputChannel) {
         for (const methodName of methods) {
             try {
                 const testCode = generateControllerTest(code, methodName);
-                
+
                 await runPHPUnitTest(testCode, outputChannel);
             } catch (error) {
                 outputChannel.appendLine(`Error testing ${methodName}: ${error.message}`);
@@ -170,7 +192,7 @@ async function runPHPUnitTest(testCode, outputChannel) {
         if (!workspaceFolders) {
             throw new Error('No workspace folder found');
         }
-		
+
         // Mengambil path root project
         const projectRoot = workspaceFolders[0].uri.fsPath;
 
@@ -231,35 +253,35 @@ async function runPHPUnitTest(testCode, outputChannel) {
 }
 
 async function selectCode() {
-	const editor = vscode.window.activeTextEditor;
-	if (!editor) {
-		vscode.window.showErrorMessage('No active editor found');
-		return;
-	}
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active editor found');
+        return;
+    }
 
-	const selection = editor.selection;
-	const selectedText = editor.document.getText(selection);
-	const fileType = getFileType(editor.document);
-	const analyzedCode = analyzeCode(selectedText, fileType);
-	if (!selectedText) {
-		vscode.window.showErrorMessage('Tidak ada code yang akan dilaporkan');
-		return;
-	}
+    const selection = editor.selection;
+    const selectedText = editor.document.getText(selection);
+    const fileType = getFileType(editor.document);
+    const analyzedCode = analyzeCode(selectedText, fileType);
+    if (!selectedText) {
+        vscode.window.showErrorMessage('Tidak ada code yang akan dilaporkan');
+        return;
+    }
 
-	const escapedText = escapeHtml(selectedText);
+    const escapedText = escapeHtml(selectedText);
 
-	const panel = vscode.window.createWebviewPanel(
-		'createTestPanel',
-		'Laporan Tugas',
-		vscode.ViewColumn.One,
-		{}
-	);
+    const panel = vscode.window.createWebviewPanel(
+        'createTestPanel',
+        'Laporan Tugas',
+        vscode.ViewColumn.One,
+        {}
+    );
 
-	panel.webview.html = getWebviewContent(escapedText, fileType, analyzedCode);
+    panel.webview.html = getWebviewContent(escapedText, fileType, analyzedCode);
 }
 
 function getWebviewContent(code, fileType, codeType) {
-	return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
@@ -280,17 +302,17 @@ function getWebviewContent(code, fileType, codeType) {
 }
 
 function escapeHtml(unsafe) {
-	return unsafe
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;")
-		.replace(/"/g, "&quot;")
-		.replace(/'/g, "&#039;");
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 function deactivate() { }
 
 module.exports = {
-	activate,
-	deactivate
+    activate,
+    deactivate
 }
