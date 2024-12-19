@@ -14,10 +14,21 @@
   ],
   "main": "./extension.js",
   "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Auto Unit Test",
+      "properties": {
+        "auto-unit-test.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API KEY for Auto Unit Test"
+        }
+      }
+    },
     "commands": [
       {
-        "command": "auto-unit-test.showMyTask",
-        "title": "Show My Task"
+        "command": "auto-unit-test.showMyProject",
+        "title": "Show My Project"
       },
       {
         "command": "auto-unit-test.testController",
@@ -39,6 +50,7 @@
     "eslint": "^9.13.0"
   },
   "dependencies": {
-    "auto-unit-test": "file:"
+    "auto-unit-test": "file:",
+    "axios": "^1.7.9"
   }
 }
