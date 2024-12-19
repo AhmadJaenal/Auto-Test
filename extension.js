@@ -10,8 +10,8 @@ function activate(context) {
 
     askForApiKey();
 
-    let showDataList = vscode.commands.registerCommand('auto-unit-test.showMyTask', async () => {
-        await showMyTask();
+    let showDataList = vscode.commands.registerCommand('auto-unit-test.showMyProject', async () => {
+        await showMyProject();
     });
 
     context.subscriptions.push(showDataList);
@@ -23,36 +23,102 @@ async function askForApiKey() {
 
     if (!apiKey) {
         const input = await vscode.window.showInputBox({
-            placeHolder: 'Masukan API KEY',
-            prompt: 'API KEY wajib isi'
+            placeHolder: 'Masukkan API KEY',
+            prompt: 'API KEY wajib diisi'
         });
 
         if (input) {
-            await vscode.workspace.getConfiguration('auto-unit-test').update('apiKey', input, vscode.ConfigurationTarget.Global);
+            try {
+                await config.update('apiKey', input, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage('API KEY berhasil disimpan!');
+            } catch (error) {
+                vscode.window.showErrorMessage('Gagal menyimpan API KEY: ' + error.message);
+            }
         } else {
             vscode.window.showErrorMessage('API KEY wajib ada');
         }
     } else {
-        vscode.window.showInformationMessage('API KEY saat ini');
+        vscode.window.showInformationMessage('API KEY saat ini: ' + apiKey);
     }
 }
 
-async function showMyTask() {
-    const dataList = [
-        'Tugas membuat fitur login user',
-        'Tugas membuat fitur registrasi user',
-        'Tugas membuat fitur update profil user',
-        'Tugas membuat fitur upload gambar',
-        'Tugas membuat fitur reset password',
-        'Tugas membuat fitur delete komentar',
-    ];
-    const selectedItem = await vscode.window.showQuickPick(dataList, {
-        placeHolder: 'Pilih tugas yang akan dilaporkan'
-    })
-    if (selectedItem) {
-        await selectCode();
-    } else {
-        vscode.window.showInformationMessage('Tidak ada yang dipilih');
+async function showMyProject() {
+    const apiKey = vscode.workspace.getConfiguration('auto-unit-test').get('apiKey');
+    const apiUrl = 'http://127.0.0.1:8000/api/project/user/4';
+
+    try {
+        const response = await fetch(apiUrl, {
+            headers: {
+                'API-Key': apiKey,
+                'Content-Type': 'application/json'
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(`Response Status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        const data = result.data;
+
+        const projectList = data.map(item => {
+            return {
+                label: `${item.name} (${item.type})`,
+                id: item.id 
+            };
+        });
+
+        const selectedItem = await vscode.window.showQuickPick(projectList, {
+            placeHolder: 'Pilih Proyek yang akan dilaporkan',
+            onDidChangeSelection: (items) => {
+            }
+        });
+
+        if (selectedItem) {
+            showTaskByProject(selectedItem.id);
+        } else {
+            vscode.window.showInformationMessage('Tidak ada yang dipilih');
+        }
+
+    } catch (error) {
+        vscode.window.showErrorMessage(error.message);
+        console.error(error.message);
+    }
+}
+
+async function showTaskByProject(id) {
+    const apiKey = vscode.workspace.getConfiguration('auto-unit-test').get('apiKey');
+    const apiUrl = `http://127.0.0.1:8000/api/task/project/${id}`;
+
+    vscode.window.showInformationMessage(`http://127.0.0.1:8000/api/task/project/${id}`);
+
+
+    try {
+        const response = await fetch(apiUrl, {
+            headers: {
+                'API-Key': apiKey,
+                'Content-Type': 'application/json'
+            },
+        });
+        if (!response.ok) {
+            throw new Error(`Response Status test: ${response.status}`)
+        }
+        const result = await response.json();
+        const data = result.data;
+
+        const projectList = data.map(item => `${item.title}`);
+        const selectedItem = await vscode.window.showQuickPick(projectList, {
+            placeHolder: 'Pilih tugas yang akan dilaporkan'
+        })
+        if (selectedItem) {
+            await selectCode();
+        } else {
+            vscode.window.showInformationMessage('Tidak ada yang dipilih');
+        }
+
+    } catch (error) {
+        vscode.window.showErrorMessage(error.message);
+        console.error(error.message);
     }
 }
 
