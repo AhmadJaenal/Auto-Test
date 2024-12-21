@@ -61,16 +61,16 @@ async function showMyProject() {
         const result = await response.json();
         const data = result.data;
 
-        const projectList = data.map(item => {
+        const projectList = data.map(project => {
             return {
-                label: `${item.name} (${item.type})`,
-                id: item.id 
+                label: `${project.name} (${project.type})`,
+                id: project.project_id 
             };
         });
 
         const selectedItem = await vscode.window.showQuickPick(projectList, {
             placeHolder: 'Pilih Proyek yang akan dilaporkan',
-            onDidChangeSelection: (items) => {
+            onDidChangeSelection: (project) => {
             }
         });
 
@@ -92,7 +92,6 @@ async function showTaskByProject(id) {
 
     vscode.window.showInformationMessage(`http://127.0.0.1:8000/api/task/project/${id}`);
 
-
     try {
         const response = await fetch(apiUrl, {
             headers: {
@@ -110,6 +109,7 @@ async function showTaskByProject(id) {
         const selectedItem = await vscode.window.showQuickPick(projectList, {
             placeHolder: 'Pilih tugas yang akan dilaporkan'
         })
+
         if (selectedItem) {
             await selectCode();
         } else {
