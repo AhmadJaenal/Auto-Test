@@ -12,7 +12,7 @@
   "activationEvents": [
     "onLanguage:php"
   ],
-  "main": "./extension.js",
+  "main": "src/extension.js",
   "contributes": {
     "configuration": {
       "type": "object",
@@ -27,7 +27,7 @@
     },
     "commands": [
       {
-        "command": "auto-unit-test.showMyProject",
+        "command": "auto-unit-test.showProject",
         "title": "Show My Project"
       },
       {
