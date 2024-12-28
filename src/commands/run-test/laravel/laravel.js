@@ -23,14 +23,11 @@ async function runPHPUnitTest(testCode, outputChannel) {
             fs.mkdirSync(testDir, { recursive: true });
         }
 
-        // Menulis file test sementara
         fs.writeFileSync(testFile, testCode);
-        outputChannel.appendLine('Unit Test dijalankan:');
         outputChannel.appendLine(testCode);
 
         // Menjalankan test menggunakan Promise
         return new Promise((resolve, reject) => {
-            // Cek apakah sistem operasi Windows
             const isWindows = process.platform === 'win32';
             let command;
 
@@ -49,14 +46,17 @@ async function runPHPUnitTest(testCode, outputChannel) {
                 // Membersihkan file test sementara
                 try {
                     fs.unlinkSync(testFile);
-                    outputChannel.appendLine('File test sementara telah dibersihkan');
                 } catch (cleanupError) {
                     outputChannel.appendLine(`Peringatan: Tidak dapat membersihkan file test: ${cleanupError.message}`);
                 }
 
                 // Menangani hasil eksekusi
                 if (error) {
-                    outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
+                    // Mencoba untuk menemukan kode respons dari stderr atau stdout
+                    const responseCodeMatch = stderr.match(/Expected response status code \[(\d+)\]/);
+                    const responseCode = responseCodeMatch ? responseCodeMatch[1] : 'Unknown';
+
+                    outputChannel.appendLine(`Error: Kode respons - ${responseCode}`);
                     reject(error);
                 } else {
                     outputChannel.appendLine('Test berhasil dijalankan');

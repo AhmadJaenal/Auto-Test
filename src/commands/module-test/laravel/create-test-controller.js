@@ -1,4 +1,4 @@
-const { runPHPUnitTest } = require('../run-test/php');
+const { runPHPUnitTest } = require('../../run-test/laravel/laravel');
 
 function isController(fileName, code) {
     const regexController = /controller/i;
@@ -40,11 +40,15 @@ function generateControllerTest(controllerCode, methodName) {
     const classMatch = controllerCode.match(/class\s+(\w+)\s+extends/);
     const className = classMatch ? classMatch[1] : 'UnknownController';
 
-    const methodMatch = controllerCode.match(new RegExp(`public\\s+function\\s+${methodName}\\s*\\([^)]*\\)\\s*{[^}]*}`));
-    const methodCode = methodMatch ? methodMatch[0] : '';
+    const methodMatch = controllerCode.match(new RegExp(`public\\s+function\\s+${methodName}\\s*\\([^)]*\\)\\s*{([^}]*)}`));
+    const methodCode = methodMatch ? methodMatch[1] : '';
 
     const viewMatch = methodCode.match(/return\s+view\s*\(\s*["']([^"']+)["']/);
     const viewName = viewMatch ? viewMatch[1] : '';
+
+    // Mencari model yang dipanggil dalam method
+    const modelMatch = methodCode.match(/(\w+)::(first|create|find|where)/);
+    const modelName = modelMatch ? modelMatch[1] : null;
 
     let testCode = `<?php
 
@@ -52,22 +56,50 @@ namespace Tests\\Feature;
 
 use Tests\\TestCase;
 use Illuminate\\Foundation\\Testing\\RefreshDatabase;
-use App\\Http\\Controllers\\${className};
+use App\\Http\\Controllers\\${className};`;
 
-class TemporaryTest extends TestCase
-{    
-    public function test_can_access_${methodName}()
-    {
-        $response = $this->get(route('${methodName}'));
-
-        $response->assertStatus(200);`;
-
-    if (viewName) {
+    // Jika model ditemukan, tambahkan use statement untuk model tersebut
+    if (modelName) {
         testCode += `
-        $response->assertViewIs('${viewName}');`;
+use App\\Models\\${modelName};`;
     }
 
     testCode += `
+
+class TemporaryTest extends TestCase
+{    
+    use RefreshDatabase;
+
+    public function test_${methodName}()
+    {
+        $contact = ${modelName ? `${modelName}::factory()->create();` : '// No model found for factory'};
+
+        $response = $this->get(route('${methodName}'));
+        $response->assertStatus(200);
+
+        if (viewName) {
+            $response->assertViewIs('${viewName}');
+        }
+
+        // assert return 
+        $response->assertViewHas('contact', function ($viewContact) use ($contact) {
+            return $viewContact->id === $contact->id;
+        });
+    }
+
+    public function test_${methodName}_NoContact()
+    {
+        $response = $this->get(route('${methodName}'));
+
+        // Memastikan status respons
+        $response->assertStatus(200);
+
+        if (viewName) {
+            $response->assertViewIs('${viewName}');
+        }
+
+        // Memastikan tidak ada data kontak yang dikembalikan
+        $response->assertViewHas('contact', null);
     }
 }`;
 

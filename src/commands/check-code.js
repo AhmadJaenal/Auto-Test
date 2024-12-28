@@ -1,9 +1,7 @@
 const vscode = require('vscode');
 
-const { createUserFactory } = require('./module-test/create-factory');
-const { isController, executeController } = require('./module-test/create-test-controller');
-
-
+const { createUserFactory } = require('./module-test/laravel/create-factory');
+const { isController, executeController } = require('./module-test/laravel/create-test-controller');
 
 function getFileType(document) {
     const openedFileType = document.uri.fsPath.split('.').pop();
@@ -12,7 +10,7 @@ function getFileType(document) {
 
 async function analyzeCode(code, fileName) {
     if (isController(fileName, code)) {
-        vscode.window.showInformationMessage('Code berikut adalah:', isController(fileName, code));
+        // vscode.window.showInformationMessage('Code berikut adalah:', isController(fileName, code));
         const outputChannel = vscode.window.createOutputChannel('Laravel Code Analyzer');
         outputChannel.show();
         executeController(code, outputChannel);
