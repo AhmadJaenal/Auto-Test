@@ -15,7 +15,7 @@ function isController(fileName, code) {
 }
 
 function generateControllerTest(code) {
-    const apiKey = "AIzaSyBP8imrZDdIdBc-Qs7i59Wh3OYSy8XF4LI";
+    const apiKey = "";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const requestData = {
