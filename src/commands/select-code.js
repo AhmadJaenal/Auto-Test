@@ -1,7 +1,6 @@
 const vscode = require('vscode');
 
-const { getWebviewContent, escapeHtml } = require('./web-view');
-const { getFileType, analyzeCode } = require('./check-code');
+const { generateControllerTest } = require('./module-test/laravel/generate-test-case/controller-test-case');
 
 async function selectCode() {
     const editor = vscode.window.activeTextEditor;
@@ -12,23 +11,8 @@ async function selectCode() {
 
     const selection = editor.selection;
     const selectedText = editor.document.getText(selection);
-    const fileType = getFileType(editor.document);
-    const analyzedCode = analyzeCode(selectedText, fileType);
-    if (!selectedText) {
-        vscode.window.showErrorMessage('Tidak ada code yang akan dilaporkan');
-        return;
-    }
 
-    const escapedText = escapeHtml(selectedText);
-
-    const panel = vscode.window.createWebviewPanel(
-        'createTestPanel',
-        'Laporan Tugas',
-        vscode.ViewColumn.One,
-        {}
-    );
-
-    panel.webview.html = getWebviewContent(escapedText, fileType, analyzedCode);
+    generateControllerTest(selectedText);
 }
 
 module.exports = { selectCode };

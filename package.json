@@ -33,6 +33,10 @@
       {
         "command": "auto-unit-test.testController",
         "title": "Test Controller"
+      },
+      {
+        "command": "auto-unit-test.generateFactoryFile",
+        "title": "Generate Factory File"
       }
     ]
   },
