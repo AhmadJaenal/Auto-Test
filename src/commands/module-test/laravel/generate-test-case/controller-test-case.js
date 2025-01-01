@@ -1,4 +1,5 @@
 const vscode = require('vscode');
+require('dotenv').config();
 
 const { getWebviewContent, escapeHtml } = require('../../../web-view');
 const { createTemporaryFile } = require('../generate-temporary-file/create-temporary');
@@ -15,7 +16,7 @@ function isController(fileName, code) {
 }
 
 function generateControllerTest(code) {
-    const apiKey = "";
+    const apiKey = process.env.GEMINI_API_KEY;
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const requestData = {
