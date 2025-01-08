@@ -18,17 +18,24 @@ async function getFileNameMigration(modelNames) {
                     return reject(err);
                 }
 
-                const migrationFiles = files.filter(file => {
-                    return modelNames.some(model => file.toLowerCase().includes(model.toLowerCase()));
+                // Membuat array untuk menyimpan pasangan model dan file migrasi
+                const modelMigrationPairs = [];
+
+                files.forEach(file => {
+                    modelNames.forEach(model => {
+                        if (file.toLowerCase().includes(model.toLowerCase())) {
+                            modelMigrationPairs.push({ model, file });
+                        }
+                    });
                 });
 
-                if (migrationFiles.length > 0) {
-                    // vscode.window.showInformationMessage(`Migration files found: ${migrationFiles.join(', ')}`);
+                if (modelMigrationPairs.length > 0) {
+                    // vscode.window.showInformationMessage(`Migration files found: ${modelMigrationPairs.map(pair => `${pair.model}: ${pair.file}`).join(', ')}`);
                 } else {
                     vscode.window.showInformationMessage('No migration files found for the given model names.');
                 }
 
-                resolve(migrationFiles);
+                resolve(modelMigrationPairs); // Mengembalikan pasangan model dan file
             });
         });
     } else {
@@ -69,19 +76,24 @@ async function readMigrationFiles(migrationFile) {
 
 async function processMigrationAttributes(modelNames) {
     try {
-        const migrationFiles = await getFileNameMigration(modelNames);
+        // Mengambil pasangan model dan file migrasi
+        const modelMigrationPairs = await getFileNameMigration(modelNames);
 
-        const readMigrationResponses = await Promise.all(migrationFiles.map(file => readMigrationFiles(file)));
+        // Membaca atribut dari setiap file migrasi
+        const readMigrationResponses = await Promise.all(modelMigrationPairs.map(pair => readMigrationFiles(pair.file)));
+
         readMigrationResponses.forEach((atribut, index) => {
-            vscode.window.showInformationMessage(`Kembalian read migration function untuk ${migrationFiles[index]}: ${atribut.join(', ')}`);
-            createFactoryFile(modelNames[index], atribut);
+            const modelName = modelMigrationPairs[index].model; // Mengambil nama model dari pasangan
+            const migrationFile = modelMigrationPairs[index].file; // Mengambil nama file migrasi
+
+            vscode.window.showInformationMessage(`Kembalian read migration function untuk ${migrationFile}: ${atribut.join(', ')}`);
+            createFactoryFile(modelName, atribut); // Menggunakan nama model yang sesuai
         });
     } catch (error) {
         console.error('Error processing migration attributes:', error);
         vscode.window.showErrorMessage('An error occurred while processing migration attributes.');
     }
 }
-
 
 
 module.exports = { processMigrationAttributes };
