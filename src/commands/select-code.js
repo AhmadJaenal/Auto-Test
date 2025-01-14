@@ -14,10 +14,23 @@ async function selectCode() {
     const selection = editor.selection;
     const selectedText = editor.document.getText(selection);
 
+    const promise = checkRoute(selectedText);
+    promise.then(route => {
+        // Pastikan route adalah objek yang perlu diubah menjadi string
+        const routeString = JSON.stringify(route); // atau metode lain sesuai kebutuhan
+        
+        const middlewarePromise = executeCheckMiddleware(routeString);
+        
+        middlewarePromise.then(middleware => {
+            generateControllerTest(selectedText, middleware, routeString);
+        }).catch(error => {
+            console.error('Error in executeCheckMiddleware:', error);
+        });
+    }).catch(error => {
+        console.error('Error in checkRoute:', error);
+    });
 
-    // checkRoute(selectedText);
-    executeCheckMiddleware(selectedText);
-    // generateControllerTest(selectedText);
+    // generateControllerTest(selectedText, middleware);
 }
 
 module.exports = { selectCode };
