@@ -46,10 +46,10 @@ async function checkMiddleware(route, data) {
         // Tampilkan hasil
         if (middlewaresFound.length > 0) {
             vscode.window.showInformationMessage(`Middleware ditemukan: ${middlewaresFound.join(', ')}`);
-            return true;
+            return middlewaresFound.join(', ');
         } else {
-            vscode.window.showInformationMessage('Tidak ada middleware ditemukan.');
-            return false;
+            vscode.window.showInformationMessage(`${route} yang dicari tidak ditemukan`);
+            return middlewaresFound.join(', ');
         }
     } catch (error) {
         console.error('Error checking middleware:', error);
@@ -57,8 +57,6 @@ async function checkMiddleware(route, data) {
         return false;
     }
 }
-
-
 function executeCheckMiddleware(route) {
     if (checkWorkspace()) {
         const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -72,7 +70,7 @@ function executeCheckMiddleware(route) {
                     return reject(err);
                 }
 
-                checkMiddleware(route, data)
+                resolve(checkMiddleware(route, data));
             });
         });
     }
