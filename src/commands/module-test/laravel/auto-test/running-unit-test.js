@@ -1,42 +1,48 @@
 const vscode = require('vscode');
-const path = require('path');
 const { exec } = require('child_process');
-const { checkWorkspace } = require('../../../../utils/check-workspace');
 
-function runUnitTestLaravel() {
-    if (!checkWorkspace()) {
-        vscode.window.showInformationMessage('Workspace tidak valid.');
-        console.error('Workspace tidak valid.');
-        return;
-    }
+const { getWebviewContent, escapeHtml } = require('../../../web-view');
 
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-        vscode.window.showInformationMessage('Tidak ada folder workspace yang aktif.');
-        console.error('Tidak ada folder workspace yang aktif.');
-        return;
-    }
-
-    const projectRoot = workspaceFolders[0].uri.fsPath;
-    const testFeatureDir = path.join(projectRoot, 'tests', 'Feature', 'TemporaryTest.php');
-
-    // Running unit test with php artisan
-    const command = `php artisan test ${testFeatureDir}`;
-
-    exec(command, { cwd: projectRoot }, (error, stdout, stderr) => {
-        if (error) {
-            vscode.window.showErrorMessage(`Error: ${stderr}`);
-            console.error(`Error: ${error.message}`);
-            return;
+async function runUnitTestLaravel() {
+    try {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            throw new Error('No workspace folder found');
         }
 
-        // Debug with console.log
+        const projectRoot = workspaceFolders[0].uri.fsPath;
+
         const outputChannel = vscode.window.createOutputChannel('Laravel Unit Test');
         outputChannel.show();
-        outputChannel.appendLine(stdout);
-        outputChannel.appendLine('Unit test selesai.');
-    });
+        outputChannel.appendLine('Menjalankan unit test dengan php artisan...');
+
+        const command = `cd "${projectRoot}" && php artisan test --filter=TemporaryTest`;
+
+        exec(command, (error, stdout, stderr) => {
+            if (stdout) outputChannel.appendLine(stdout);
+            if (stderr) outputChannel.appendLine(stderr);
+
+            const panel = vscode.window.createWebviewPanel(
+                'createTestPanel',
+                'Laporan Tugas',
+                vscode.ViewColumn.One,
+                {}
+            );
+    
+            panel.webview.html = getWebviewContent(stdout, 'fileType', 'analyzedCode');
+
+            if (error) {
+                outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
+            } else {
+                outputChannel.appendLine('Test berhasil dijalankan');
+            }
+        });
+
+    } catch (error) {
+        vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
+    }
 }
 
-module.exports = { runUnitTestLaravel };
+module.exports = {
+    runUnitTestLaravel
+};
