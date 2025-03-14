@@ -1,7 +1,6 @@
 const vscode = require('vscode');
 const { exec } = require('child_process');
-
-const { getWebviewContent, escapeHtml } = require('../../../web-view');
+const { redirectToWeb } = require('../../../web-view');
 
 async function runUnitTestLaravel() {
     try {
@@ -22,14 +21,10 @@ async function runUnitTestLaravel() {
             if (stdout) outputChannel.appendLine(stdout);
             if (stderr) outputChannel.appendLine(stderr);
 
-            const panel = vscode.window.createWebviewPanel(
-                'createTestPanel',
-                'Laporan Tugas',
-                vscode.ViewColumn.One,
-                {}
-            );
-    
-            panel.webview.html = getWebviewContent(stdout, 'fileType', 'analyzedCode');
+            const testResults = parseTestOutput(stdout);
+            const formattedResults = formatTestResults(testResults);
+
+            redirectToWeb(formattedResults);
 
             if (error) {
                 outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
@@ -41,6 +36,52 @@ async function runUnitTestLaravel() {
     } catch (error) {
         vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
     }
+}
+
+function parseTestOutput(output) {
+    const lines = output.split('\n');
+    const results = [];
+    let currentTest = null;
+
+    for (const line of lines) {
+        if (line.includes('Tests\\')) {
+            const match = line.match(/(\w+)\s+(Tests\\[\w\\]+)/);
+            if (match) {
+                currentTest = {
+                    status: match[1],
+                    class: match[2],
+                    tests: []
+                };
+                results.push(currentTest);
+            }
+        } else if (line.trim().startsWith('✓') || line.trim().startsWith('⨯')) {
+            const isSuccess = line.trim().startsWith('✓');
+            const match = line.match(/[✓⨯]\s+([\w\s]+)(?:\s+)(\d+\.\d+s)/);
+
+            if (match && currentTest) {
+                currentTest.tests.push({
+                    name: match[1].trim(),
+                    passed: isSuccess,
+                    time: match[2]
+                });
+            }
+        }
+    }
+
+    return results;
+}
+
+function formatTestResults(results) {
+    let formatted = '<h2>Test Results</h2><ul>';
+    results.forEach(test => {
+        formatted += `<li><strong>${test.status}</strong> - <em>${test.class}</em><ul>`;
+        test.tests.forEach(t => {
+            formatted += `<li>${t.name}: ${t.passed ? '✔️' : '❌'} (${t.time})</li>`;
+        });
+        formatted += '</ul></li>';
+    });
+    formatted += '</ul>';
+    return formatted;
 }
 
 module.exports = {
