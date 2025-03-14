@@ -4,11 +4,6 @@ const fs = require('fs');
 
 const { checkWorkspace } = require('../../../../utils/check-workspace');
 
-
-function hasMiddleware(route) {
-    return route.includes('middleware');
-}
-
 async function checkMiddleware(route, data) {
     try {
         const middlewarePattern = /->middleware\(\s*['"]([^'"]+)['"]\s*\)/g;

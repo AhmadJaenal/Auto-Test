@@ -15,8 +15,8 @@ function isController(fileName, code) {
     );
 }
 
-function generateControllerTest(code) {
-    const apiKey = '';
+function generateControllerTest(code, middleware, route) {
+    const apiKey = 'AIzaSyDxsVF-a_js4PhWguZbU3P8KRel1FHrUjU';
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const requestData = {
@@ -26,7 +26,7 @@ function generateControllerTest(code) {
 
 Code yang akan diuji adalah sebagai berikut:
 
-                ${code}
+${code}
 
 ${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
 
@@ -106,15 +106,6 @@ public function testDeleteNewsSuccess()
             // vscode.window.showInformationMessage(`Test Case: ${generateTestCase}`);
 
             createTemporaryFile(generateTestCase);
-
-            const panel = vscode.window.createWebviewPanel(
-                'createTestPanel',
-                'Laporan Tugas',
-                vscode.ViewColumn.One,
-                {}
-            );
-
-            panel.webview.html = getWebviewContent(generateTestCase, 'fileType', 'analyzedCode');
 
             runUnitTestLaravel();
         })

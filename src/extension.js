@@ -6,6 +6,7 @@ const { showProject } = require('./commands/show-project');
 const { selectCode } = require('./commands/select-code');
 const { getModelFileNames } = require('./commands/module-test/laravel/generate-factory/model/get-filename-model');
 const { createTemporaryFile } = require('./commands/module-test/laravel/generate-temporary-file/create-temporary');
+const { runUnitTestLaravel } = require('./commands/module-test/laravel/auto-test/running-unit-test');
 
 
 /**
@@ -27,14 +28,14 @@ function activate(context) {
         await getModelFileNames();
     });
 
-    // let generateTemporaryFile = vscode.commands.registerCommand('auto-unit-test.createTemporaryFile', async () => {
-    //     await createTemporaryFile('Hello World!');
-    // });
+    let runTestLaravel = vscode.commands.registerCommand('auto-unit-test.runTestLaravel', async () => {
+        runUnitTestLaravel();
+    });
 
     context.subscriptions.push(showDataList);
     context.subscriptions.push(testController);
     context.subscriptions.push(generateFactoryFile);
-    // context.subscriptions.push(generateTemporaryFile);
+    context.subscriptions.push(runTestLaravel);
 }
 
 function deactivate() { }

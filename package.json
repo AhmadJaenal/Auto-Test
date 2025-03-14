@@ -37,6 +37,10 @@
       {
         "command": "auto-unit-test.generateFactoryFile",
         "title": "Generate Factory File"
+      },
+      {
+        "command": "auto-unit-test.runTestLaravel",
+        "title": "Run Test Laravel"
       }
     ]
   },
