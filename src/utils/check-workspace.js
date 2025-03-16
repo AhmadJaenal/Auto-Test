@@ -1,6 +1,9 @@
 const vscode = require('vscode');
-function checkWorkspace() {
-    return !!vscode.workspace.workspaceFolders;
+
+class WorkspaceChecker {
+    static checkWorkspace() {
+        return !!vscode.workspace.workspaceFolders;
+    }
 }
 
-module.exports = { checkWorkspace };
+module.exports = WorkspaceChecker;
