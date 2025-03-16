@@ -1,6 +1,6 @@
 const vscode = require('vscode');
 const { exec } = require('child_process');
-const ReportGenerator = require('../../report-generator');
+const ReportService = require('../../services/report-service');
 
 class UnitTestManager {
     runUnitTestLaravel() {
@@ -24,7 +24,7 @@ class UnitTestManager {
                 const testResults = this.parseTestOutput(stdout);
                 const formattedResults = this.formatTestResults(testResults);
 
-                const report = new ReportGenerator();
+                const report = new ReportService();
                 report.redirectToWeb(formattedResults);
 
                 if (error) {

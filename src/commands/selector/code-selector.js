@@ -1,7 +1,7 @@
 const vscode = require('vscode');
-const ControllerTestModule = require('./module-test/laravel/generate-test-case/controller-test-case');
-const RouteChecker = require('./module-test/laravel/route/route-checker');
-const MiddlewareChecker = require('./module-test/laravel/route/middleware-checker');
+const ControllerTestModule = require('../module-test/laravel/generate-test-case/controller-test-case');
+const RouteChecker = require('../module-test/laravel/route/route-checker');
+const MiddlewareChecker = require('../module-test/laravel/route/middleware-checker');
 
 class CodeSelector {
     constructor() {

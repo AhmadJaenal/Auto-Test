@@ -1,18 +1,21 @@
 const vscode = require('vscode');
-const TaskManager = require('./task-manager');
+const CodeSelector = require('../selector/code-selector');
 
-class ProjectManager {
+class TaskService {
     constructor() {
-        this.taskManager = new TaskManager();
-        this.apiKey = vscode.workspace.getConfiguration('auto-unit-test').get('apiKey');
-        this.apiUrl = 'http://127.0.0.1:8000/api/project/user/4';
+        this.codeSelector = new CodeSelector();
     }
 
-    async showProject() {
+    async showTaskByProject(id) {
+        const apiKey = vscode.workspace.getConfiguration('auto-unit-test').get('apiKey');
+        const apiUrl = `http://127.0.0.1:8000/api/task/project/${id}`;
+
+        vscode.window.showInformationMessage(apiUrl);
+
         try {
-            const response = await fetch(this.apiUrl, {
+            const response = await fetch(apiUrl, {
                 headers: {
-                    'API-Key': this.apiKey,
+                    'API-Key': apiKey,
                     'Content-Type': 'application/json'
                 },
             });
@@ -24,17 +27,13 @@ class ProjectManager {
             const result = await response.json();
             const data = result.data;
 
-            const projectList = data.map(project => ({
-                label: `${project.name} (${project.type})`,
-                id: project.project_id
-            }));
-
+            const projectList = data.map(item => item.title);
             const selectedItem = await vscode.window.showQuickPick(projectList, {
-                placeHolder: 'Pilih Proyek yang akan dilaporkan'
+                placeHolder: 'Pilih tugas yang akan dilaporkan'
             });
 
             if (selectedItem) {
-                this.taskManager.showTaskByProject(selectedItem.id);
+                await this.codeSelector.selectCode();
             } else {
                 vscode.window.showInformationMessage('Tidak ada yang dipilih');
             }
@@ -45,4 +44,4 @@ class ProjectManager {
     }
 }
 
-module.exports = ProjectManager;
+module.exports = TaskService;

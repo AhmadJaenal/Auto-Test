@@ -1,9 +1,9 @@
 const vscode = require('vscode');
 
 const ApiKeyHandler = require('./commands/module-test/api/api-key-handler');
-const ProjectManager = require('./commands/project-manager');
+const ProjectManager = require('./commands/services/project-service');
 
-const CodeSelector = require('./commands/code-selector');
+const CodeSelector = require('./commands/selector/code-selector');
 const ModelFileReader = require('./commands/module-test/laravel/generate-factory/core/model-file-reader');
 const UnitTestManager = require('./commands/module-test/auto-test/unit-test-manager');
 

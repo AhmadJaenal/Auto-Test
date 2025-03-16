@@ -1,6 +1,6 @@
 const vscode = require('vscode');
 
-class ReportGenerator {
+class ReportService {
     async redirectToWeb(resultUnitTest) {
         const report = `
             <h2><strong>LAPORAN HASIL KINERJA PENGEMBANGAN FITUR [Nama Fitur]</strong></h2>
@@ -109,4 +109,4 @@ class ReportGenerator {
     }
 }
 
-module.exports = ReportGenerator;
+module.exports = ReportService;
