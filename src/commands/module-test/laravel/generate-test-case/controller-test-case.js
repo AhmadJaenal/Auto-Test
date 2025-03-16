@@ -1,28 +1,30 @@
 const vscode = require('vscode');
-// require('dotenv').config();
+const TemporaryFileModule = require('../generate-temporary-file/create-temporary');
+const UnitTestManager = require('../../auto-test/unit-test-manager');
 
-const { getWebviewContent, escapeHtml } = require('../../../web-view');
-const { createTemporaryFile } = require('../generate-temporary-file/create-temporary');
-const { runUnitTestLaravel } = require('../auto-test/running-unit-test');
+class ControllerTestModule {
+    constructor() {
+        this.temporary = new TemporaryFileModule();
+        this.unitTest = new UnitTestManager();
+    }
 
-function isController(fileName, code) {
-    const regexController = /controller/i;
-    const regexPublicFunction = /public\s+function/i;
+    isController(fileName, code) {
+        const regexController = /controller/i;
+        const regexPublicFunction = /public\s+function/i;
+        return (
+            regexController.test(fileName) ||
+            (code && (regexController.test(code) || regexPublicFunction.test(code)))
+        );
+    }
 
-    return (
-        regexController.test(fileName) ||
-        (code && (regexController.test(code) || regexPublicFunction.test(code)))
-    );
-}
+    generateControllerTest(code, middleware, route) {
+        const apiKey = 'AIzaSyDxsVF-a_js4PhWguZbU3P8KRel1FHrUjU';
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-function generateControllerTest(code, middleware, route) {
-    const apiKey = 'AIzaSyDxsVF-a_js4PhWguZbU3P8KRel1FHrUjU';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    const requestData = {
-        contents: [{
-            parts: [{
-                text: `Saya adalah seorang programmer pemula yang sedang belajar mengenai unit test. Tolong buatkan code unit test menggunakan framework Laravel versi 11. Tujuan dari unit test ini adalah mencakup semua kemungkinan skenario (success, failure, error handling, dll.), tetapi tetap sederhana, mudah dipahami, dan langsung dapat dijalankan tanpa penyesuaian tambahan.
+        const requestData = {
+            contents: [{
+                parts: [{
+                    text: `Saya adalah seorang programmer pemula yang sedang belajar mengenai unit test. Tolong buatkan code unit test menggunakan framework Laravel versi 11. Tujuan dari unit test ini adalah mencakup semua kemungkinan skenario (success, failure, error handling, dll.), tetapi tetap sederhana, mudah dipahami, dan langsung dapat dijalankan tanpa penyesuaian tambahan.
 
 Code yang akan diuji adalah sebagai berikut:
 
@@ -84,37 +86,32 @@ public function testDeleteNewsSuccess()
     $response->assertSessionHas('success', 'Data Berhasil Dihapus');
 }
 `
+                }]
             }]
-        }]
-    };
+        };
 
-    fetch(url, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify(requestData)
-    })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
+        fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(requestData)
         })
-        .then(data => {
-            const generateTestCase = data['candidates'][0]['content']['parts'][0]['text'];
-            // vscode.window.showInformationMessage(`Test Case: ${generateTestCase}`);
-
-            createTemporaryFile(generateTestCase);
-
-            runUnitTestLaravel();
-        })
-        .catch(error => {
-            vscode.window.showErrorMessage(`There was a problem with the fetch operation: ${error.message}`);
-        });
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const generateTestCase = data['candidates'][0]['content']['parts'][0]['text'];
+                this.temporary.createTemporaryFile(generateTestCase);
+                this.unitTest.runUnitTestLaravel();
+            })
+            .catch(error => {
+                vscode.window.showErrorMessage(`There was a problem with the fetch operation: ${error.message}`);
+            });
+    }
 }
 
-module.exports = {
-    isController,
-    generateControllerTest,
-};
+module.exports = ControllerTestModule;

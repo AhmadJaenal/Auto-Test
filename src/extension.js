@@ -1,35 +1,40 @@
 const vscode = require('vscode');
 
-const { askForApiKey } = require('./commands/module-test/api/ask-api-key');
-const { showProject } = require('./commands/show-project');
+const ApiKeyHandler = require('./commands/module-test/api/api-key-handler');
+const ProjectManager = require('./commands/project-manager');
 
-const { selectCode } = require('./commands/select-code');
-const { getModelFileNames } = require('./commands/module-test/laravel/generate-factory/model/get-filename-model');
-const { createTemporaryFile } = require('./commands/module-test/laravel/generate-temporary-file/create-temporary');
-const { runUnitTestLaravel } = require('./commands/module-test/laravel/auto-test/running-unit-test');
+const CodeSelector = require('./commands/code-selector');
+const ModelFileReader = require('./commands/module-test/laravel/generate-factory/core/model-file-reader');
+const UnitTestManager = require('./commands/module-test/auto-test/unit-test-manager');
 
 
 /**
  * @param {vscode.ExtensionContext} context
  */
 function activate(context) {
+    const apiKeyHandler = new ApiKeyHandler();
+    const projectManager = new ProjectManager();
+    const codeSelector = new CodeSelector();
+    const modelFileReader = new ModelFileReader();
+    const unitTestManager = new UnitTestManager();
 
-    askForApiKey();
+
+    apiKeyHandler.askForApiKey();
 
     let showDataList = vscode.commands.registerCommand('auto-unit-test.showProject', async () => {
-        await showProject();
+        await projectManager.showProject();
     });
 
     let testController = vscode.commands.registerCommand('auto-unit-test.testController', async () => {
-        selectCode();
+        codeSelector.selectCode();
     });
 
     let generateFactoryFile = vscode.commands.registerCommand('auto-unit-test.generateFactoryFile', async () => {
-        await getModelFileNames();
+        await modelFileReader.getModelFileNames();
     });
 
     let runTestLaravel = vscode.commands.registerCommand('auto-unit-test.runTestLaravel', async () => {
-        runUnitTestLaravel();
+        unitTestManager.runUnitTestLaravel();
     });
 
     context.subscriptions.push(showDataList);
