@@ -4,13 +4,11 @@ const RouteChecker = require('../module-test/laravel/route/route-checker');
 const MiddlewareChecker = require('../module-test/laravel/route/middleware-checker');
 
 class CodeSelector {
-    constructor() {
-        this.controllerTest = new ControllerTestModule();
-        this.routeChecker = new RouteChecker();
-        this.middlewareChecker = new MiddlewareChecker();
-    }
-
     async selectCode() {
+        const controllerTestModule = new ControllerTestModule();
+        const routeChecker = new RouteChecker();
+        const middlewareChecker = new MiddlewareChecker();
+
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor found');
@@ -18,13 +16,18 @@ class CodeSelector {
         }
 
         const selection = editor.selection;
+        if (selection.isEmpty) {
+            vscode.window.showErrorMessage('Pilih kode yang akan di test!');
+            return;
+        }
+
         const selectedText = editor.document.getText(selection);
+      
 
         try {
-            const route = await this.routeChecker.checkRoute(selectedText);
-            const routeString = JSON.stringify(route);
-            const middleware = await this.middlewareChecker.executeCheckMiddleware(routeString);
-            this.controllerTest.generateControllerTest(selectedText, middleware, routeString);
+            const route = await routeChecker.checkRoute(selectedText);
+            const middleware = await middlewareChecker.executeCheckMiddleware(route);
+            controllerTestModule.generateControllerTest(selectedText, middleware, route);
         } catch (error) {
             console.error('Error in processing:', error);
         }

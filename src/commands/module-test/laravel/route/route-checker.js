@@ -4,12 +4,12 @@ const fs = require('fs');
 const WorkspaceChecker = require('../../../../utils/check-workspace');
 
 class RouteChecker {
-    getFunctionName(code) {
+    static getFunctionName(code) {
         const match = code.match(/function\s+([a-zA-Z_]\w*)/);
         return match ? match[1] : null;
     }
 
-    readControllerName() {
+    static readControllerName() {
         const activeEditor = vscode.window.activeTextEditor;
         if (activeEditor) {
             const fileName = activeEditor.document.fileName;
@@ -20,10 +20,10 @@ class RouteChecker {
         }
     }
 
-    checkRoute(functionCode) {
-        const workspace = new WorkspaceChecker();
-
-        if (workspace.checkWorkspace()) {
+    async checkRoute(functionCode) {
+        const workspaceChecker = new WorkspaceChecker();
+        
+        if (workspaceChecker.checkWorkspace()) {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             const projectRoot = workspaceFolders[0].uri.fsPath;
             const routeFilePath = path.join(projectRoot, 'routes', 'web.php');

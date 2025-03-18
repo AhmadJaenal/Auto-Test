@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 
 class WorkspaceChecker {
-    static checkWorkspace() {
+    checkWorkspace() {
         return !!vscode.workspace.workspaceFolders;
     }
 }

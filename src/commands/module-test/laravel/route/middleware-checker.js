@@ -4,7 +4,7 @@ const fs = require('fs');
 const WorkspaceChecker = require('../../../../utils/check-workspace');
 
 class MiddlewareChecker {
-    async checkMiddleware(route, data) {
+    static async checkMiddleware(route, data) {
         try {
             const middlewarePattern = /->middleware\(\s*['"]([^'"]+)['"]\s*\)/g;
             const groupMiddlewarePattern = /Route::middleware\(\s*['"]([^'"]+)['"]\)\s*->group\(\s*function\s*\(\)\s*{([^]*)}/g;
