@@ -4,25 +4,53 @@ const path = require('path');
 const WorkspaceChecker = require('../../../../../utils/check-workspace');
 
 class FactoryGenerator {
-    generateFactoryAttributes(atribut) {
-        const regex = /['"]([^'"]*)['"]/g;
-        const matches = [];
-        let match;
+    generateFactoryAttributes(attributeLines) {
+        const attributes = [];
 
-        while ((match = regex.exec(atribut)) !== null) {
-            matches.push(match[1]);
-        }
+        attributeLines.forEach(line => {
+            const typeMatch = line.match(/\$table->(\w+)\(["'](\w+)["']/);
+            if (!typeMatch) return;
 
-        const factoryAttributes = matches.map(attr => {
-            return `'${attr}' => fake()->${attr === 'password' ? 'password()' : 'text()'},`;
+            const [_, type, name] = typeMatch;
+            let fakerCode = 'text()'; // default
+
+            switch (type) {
+                case 'string':
+                    const lengthMatch = line.match(/string\([^)]+,\s*(\d+)/);
+                    fakerCode = lengthMatch ? `text(${lengthMatch[1]})` : 'text(100)';
+                    break;
+                case 'text':
+                    fakerCode = 'paragraph()';
+                    break;
+                case 'integer':
+                case 'bigInteger':
+                case 'smallInteger':
+                    fakerCode = 'numberBetween(1, 100)';
+                    break;
+                case 'boolean':
+                    fakerCode = 'boolean()';
+                    break;
+                case 'date':
+                case 'timestamp':
+                case 'dateTime':
+                    fakerCode = 'dateTime()';
+                    break;
+                case 'uuid':
+                    fakerCode = 'uuid()';
+                    break;
+                default:
+                    fakerCode = 'text()';
+            }
+
+            attributes.push(`'${name}' => fake()->${fakerCode},`);
         });
 
         return `return [
-        ${factoryAttributes.map(attr => `        ${attr}`).join('\n')}
+${attributes.map(attr => `        ${attr}`).join('\n')}
     ];`;
     }
 
-    async createFactoryFile(modelName, atribut) {
+    async createFactoryFile(modelName, attributeLines) {
         const workspace = new WorkspaceChecker();
         if (workspace.checkWorkspace()) {
             const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -40,7 +68,7 @@ use Illuminate\\Database\\Eloquent\\Factories\\Factory;
 
 class ${modelName}Factory extends Factory
 {
-    protected $model = ${modelName}::class;
+    protected \$model = ${modelName}::class;
 
     /**
      * Define the model's default state.
@@ -49,7 +77,7 @@ class ${modelName}Factory extends Factory
      */
     public function definition()
     {
-        ${this.generateFactoryAttributes(atribut)}
+        ${this.generateFactoryAttributes(attributeLines)}
     }
 }`;
 
