@@ -6,38 +6,66 @@ const WorkspaceChecker = require('../../../../utils/check-workspace');
 class MiddlewareChecker {
     static async checkMiddleware(route, data) {
         try {
-            const middlewarePattern = /->middleware\(\s*['"]([^'"]+)['"]\s*\)/g;
-            const groupMiddlewarePattern = /Route::middleware\(\s*['"]([^'"]+)['"]\)\s*->group\(\s*function\s*\(\)\s*{([^]*)}/g;
-            const methodPattern = /(Route::(get|post|put|delete|patch|options)\s*\(\s*['"]([^'"]+)['"]\s*,)/g;
+            const middlewarePattern = new RegExp(`->middleware\\(\\s*['"]([^'"]+)['"]\\s*\\)`, 'g');
+
+            const groupMiddlewarePattern = new RegExp(
+                `Route::middleware\\(([^)]*)\\)\\s*->group\\(\\s*function\\s*\\(\\)\\s*{`,
+                'g'
+            );
 
             let match;
             const middlewaresFound = [];
+            const middlewareGroup = [];
 
             while ((match = middlewarePattern.exec(route)) !== null) {
                 middlewaresFound.push(match[1]);
             }
 
-            if (middlewaresFound.length === 0) {
-                let groupMatch;
-                while ((groupMatch = groupMiddlewarePattern.exec(data)) !== null) {
-                    const middlewareGroup = groupMatch[1];
-                    const groupRoutes = groupMatch[2];
+            vscode.window.showInformationMessage(`Route yang akan dicari ${route}`)
 
-                    let innerMatch;
-                    while ((innerMatch = methodPattern.exec(groupRoutes)) !== null) {
-                        const groupRoute = innerMatch[3];
-                        if (route.includes(groupRoute)) {
-                            middlewaresFound.push(middlewareGroup);
+            while ((match = groupMiddlewarePattern.exec(data)) !== null) {
+                const startIndex = match.index;
+                let braceCount = 0;
+                let endIndex = startIndex;
+                let started = false;
+
+                for (let i = startIndex; i < data.length; i++) {
+                    const char = data[i];
+
+                    if (char === '{') {
+                        braceCount++;
+                        started = true;
+                    } else if (char === '}') {
+                        braceCount--;
+                        if (braceCount === 0 && started) {
+                            endIndex = i + 1;
+                            break;
                         }
                     }
                 }
+
+                
+                let afterBlockIndex = endIndex;
+                while (afterBlockIndex < data.length && data[afterBlockIndex] !== ';') {
+                    afterBlockIndex++;
+                }
+                afterBlockIndex++;
+
+                const fullGroupCode = data.slice(startIndex, afterBlockIndex);
+                const middlewareName = match[1];
+            
+                if (fullGroupCode.includes(route)) {
+                    middlewaresFound.push(middlewareName); 
+                }
+            
+                middlewareGroup.push(fullGroupCode);
             }
 
             if (middlewaresFound.length > 0) {
                 vscode.window.showInformationMessage(`Middleware ditemukan: ${middlewaresFound.join(', ')}`);
                 return middlewaresFound.join(', ');
             } else {
-                vscode.window.showInformationMessage(`${route} yang dicari tidak ditemukan`);
+                vscode.window.showInformationMessage(`Middleware tidak ditemukan untuk route: ${route}`);
                 return middlewaresFound.join(', ');
             }
         } catch (error) {

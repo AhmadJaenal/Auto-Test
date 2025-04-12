@@ -32,8 +32,10 @@ class RouteChecker {
             const controllerName = RouteChecker.readControllerName();
 
             if (controllerName) {
-                const routeNamePattern = new RegExp(`Route::(get|post|put|delete)\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[${controllerName}::class,\\s*['"]${functionName}['"]\\s*\\](?:\\s*->name\\(['"]([^'"]+)['"]\\))?`, 'g');
-
+                const routeNamePattern = new RegExp(
+                    `Route::(get|post|put|delete)\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[\\s*${controllerName}::class\\s*,\\s*['"]${functionName}['"]\\s*\\](.*?)\\)\\s*;`,
+                    'gs'
+                  );
                 return new Promise((resolve, reject) => {
                     fs.readFile(routeFilePath, 'utf8', (err, data) => {
                         if (err) {
