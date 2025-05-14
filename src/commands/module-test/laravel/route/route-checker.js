@@ -33,8 +33,8 @@ class RouteChecker {
 
             if (controllerName) {
                 const routeNamePattern = new RegExp(
-                    `Route::(get|post|put|delete|update|patch)\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[\\s*${controllerName}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]\\s*\\)\\s*;`,
-                    'gs'
+                    `Route::(get|post|put|delete|patch)\\s*\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[\\s*${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]\\s*\\)\\s*;?`,
+                    'gis'
                 );
                 return new Promise((resolve, reject) => {
                     fs.readFile(routeFilePath, 'utf8', (err, data) => {
