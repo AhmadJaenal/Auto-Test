@@ -32,10 +32,11 @@ class RouteChecker {
             const controllerName = RouteChecker.readControllerName();
 
             if (controllerName) {
-                const routeNamePattern = new RegExp(
-                    `Route::(get|post|put|delete|patch)\\s*\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[\\s*${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]\\s*\\)\\s*;?`,
+                const routePattern = new RegExp(
+                    `Route::\\s*(get|post|put|delete|patch|resource)\\s*\\(\\s*['"]([^'"]+)['"]\\s*,\\s*(?:\\[\\s*${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]|${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class)\\s*\\)\\s*;?`,
                     'gis'
                 );
+
                 return new Promise((resolve, reject) => {
                     fs.readFile(routeFilePath, 'utf8', (err, data) => {
                         if (err) {
@@ -45,7 +46,7 @@ class RouteChecker {
 
                         const routes = [];
                         let match;
-                        while ((match = routeNamePattern.exec(data)) !== null) {
+                        while ((match = routePattern.exec(data)) !== null) {
                             routes.push(match[0]);
                         }
 

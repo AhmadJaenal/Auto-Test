@@ -88,7 +88,7 @@ class CodeSelector {
                         const route = await routeChecker.checkRoute({ functionCode: selectedText });
                         const middleware = await middlewareChecker.executeCheckMiddleware(route);
                         const modelTableList = await modelFileReader.getTabelDatabaseFromModel();
-                        // createUnitTest.generateUnitTest({ code: selectedText, route: route, isLaravel: true, tableName: modelTableList, middleware: middleware});
+                        createUnitTest.generateUnitTest({ code: selectedText, route: route, isLaravel: true, tableName: modelTableList, middleware: middleware});
                     }
                     
                     if (isModel) {
