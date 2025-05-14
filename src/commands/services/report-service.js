@@ -1,7 +1,7 @@
 const vscode = require('vscode');
 
 class ReportService {
-    async redirectToWeb(resultUnitTest) {
+    async redirectToWeb(resultUnitTest, taskId) {
         const report = `
             <h2><strong>LAPORAN HASIL KINERJA PENGEMBANGAN FITUR [Nama Fitur]</strong></h2>
             <h2>
@@ -100,11 +100,11 @@ class ReportService {
         `;
 
         const data = {
-            apiKey: 'dfhdjfhdjfd',
+            apiKey: '48e35ac83cb10acc68cec36c492c86053e728b4c973423cea300588afd9cd618',
             report: report
         };
 
-        const url = `http://127.0.0.1:8000/buat-laporan?${new URLSearchParams(data).toString()}`;
+        const url = `http://127.0.0.1:8000/buat-laporan?taskId=${taskId}&${new URLSearchParams(data).toString()}`;
         await vscode.env.openExternal(vscode.Uri.parse(url));
     }
 }

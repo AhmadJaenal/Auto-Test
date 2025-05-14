@@ -1,3 +1,4 @@
+const { OpenAI } = require('openai');
 const vscode = require('vscode');
 const TemporaryFileModule = require('../generate-temporary-file/create-temporary');
 const UnitTestManager = require('../../auto-test/unit-test-manager');
@@ -7,199 +8,722 @@ class GenerateTestModule {
         this.temporary = new TemporaryFileModule();
         this.unitTest = new UnitTestManager();
     }
+    async generateUnitTest({ code, type = "controller", route = null, middleware = null, migration = null, atribut = null, isLaravel = false, isDart = false, tableName = [] }) {
+        const openai = new OpenAI({
+            apiKey: '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',
+        });
 
-    generateUnitTest({ code, type = "controller", route, middleware, migration, atribut }) {
-        const apiKey = 'AIzaSyDxsVF-a_js4PhWguZbU3P8KRel1FHrUjU';
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        let prompt = '';
 
-        let promptRequest;
+        if (isLaravel) {
+            switch (type) {
+                case "controller":
+                    prompt = `
+Anda adalah seorang SOFTWARE TESTER yang sangat ahli dalam kode tes untuk bahasa pemrograman. Anda SANGAT JELI dalam membuat kode tes. Anda juga selalu DAPAT MELIHAT KELEMAHAN DARI SEBUAH KODE. Sekarang tugas ANDA adalah MEMBUAT KODE TES BERDASARKAN KODE YANG DIKIRIM TANPA HARUS MENJELASKAN APAPUN. Kode yang Anda harus buatkan tes-nya adalah kode yang bisa dimengerti oleh programmer pemula yang tidak memiliki pengalaman dalam membuat kode tes. Kode tes yang Anda buat HARUS sesederhana mungkin agar mudah dipahami oleh programmer pemula. 
+HASIL yang Anda berikan akan langsung dimasukan ke dalam sebuah file tes dan dijalankan pengujian. Jadi berikan hasilnya hanya berupa kode tes agar tidak ada penyesuaian yang perlu dilakukan. Berikut adalah potongan kode CONTROLLER yang harus anda buatkan kode tes nya
+${code}
+${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
+${route ? `Route kode tersebut adalah sebagai berikut: ${route}` : ''}
+${code}
+${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
+${route ? `Route kode tersebut adalah sebagai berikut: ${route}` : ''}
+${atribut ? `Berikut adalah artibut yang ada pada file resource, jadi sesuikan datanya dengan atribut berikut: ${atribut}` : ''}
+${tableName ? `Berikut adalah nama model dan table yang digunakan pada databasenya: ${tableName}` : ''}
+                            
+Langkah-langkah yang harus dilakukan:
+1. class dibuat dengan nama TemporaryTest
+2. Kode tes yang dibuat harus mencakup berhasil, gagal, validasi, tanpa parameter
+3. Buat kode tes dengan menggunakan PHPUnit
+4. Buat kode tes tanpa menggunakan Mock
+5. Model, Factory dan Seeder sudah tersedia dan siap digunakan, untuk penamaan model Anda dapat melihat dari kode yang dikirimkan
+Contoh:
+public function testDeleteNewsSuccess()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
 
-        switch (type) {
-            case "controller":
-                promptRequest = {
-                    contents: [{
-                        parts: [{
-                            text: `Saya adalah seorang programmer pemula yang sedang belajar mengenai unit test. Tolong bantu saya membuat kode unit test yang bersih, sederhana, dan terstruktur menggunakan framework Laravel versi 11. Unit test ini harus mencakup semua kemungkinan logika dan kondisi yang muncul dalam kode yang akan diuji, serta ditulis dalam gaya **terstruktur dan berbasis logika kode**.
+        News::factory()->create([
+            'url_img' => 'public/image/sample.jpg',
+        ]);
 
-                                    Ikuti pendekatan berikut dalam menyusun kode:
-                                    - **Langkah 1**: Setup data dan autentikasi (jika ada middleware).
-                                    - **Langkah 2**: Jalankan aksi sesuai route dan logika dalam controller.
-                                    - **Langkah 3**: Lakukan validasi hasil menggunakan assertion PHPUnit.
-                                    - **Langkah 4**: Periksa semua kemungkinan skenario (berhasil, gagal validasi, error, akses tidak sah).
-                                    - **Langkah 5**: Ulangi proses ini untuk setiap skenario dengan pemisahan fungsi test yang jelas.
-                                    - Tuliskan setiap fungsi test berdasarkan **struktur kode dan logika sistem yang sebenarnya**, seolah-olah Anda sedang berpikir dalam bentuk kode (*chain-of-code*).
+        $news = News::first();
 
-                                    ### Berikut adalah kode yang akan diuji:
-                                    ${code}
+        Storage::fake('public');
+        Storage::put('public/image/sample.jpg', 'content');
 
-                                    ${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
+        $this->assertDatabaseHas('news', ['id' => $news->id]);
+        $response = $this->post(route('deleteNews', $news->id));
 
-                                    ### Route-nya adalah sebagai berikut:
-                                    ${route}
+        $this->assertDatabaseMissing('news', ['id' => $news->id]);
+        Storage::disk('public')->assertMissing('image/sample.jpg');
 
-                                    ### Kriteria hasil unit test:
-                                    1. Gunakan PHPUnit terbaru (Laravel 11).
-                                    2. Class unit test bernama 'TemporaryTest'.
-                                    3. Test harus mencakup semua skenario logika:
-                                    - Skenario sukses
-                                    - Skenario validasi gagal
-                                    - Skenario error tak terduga (bukan error database)
-                                    - Skenario akses tidak diizinkan (jika ada middleware)
-                                    4. Model dan Factory sesuai dengan yang digunakan dalam code controller.
-                                    5. Impor semua model yang digunakan di bagian atas ('use App\Models\NamaModel;').
-                                    6. Hindari penggunaan mock object.
-                                    7. Jangan beri komentar, penjelasan, atau tag bahasa apa pun.
-                                    8. Kode harus langsung bisa dipakai di file test tanpa perlu penyesuaian tambahan dan hilangkan tag bahasa pemrograman seperi php, dart, flutter dan lainya.
+        $response->assertSessionHas('success', 'Data Berhasil Dihapus');
+    }
 
-                                    ### Contoh unit test yang ingin ditiru:
-                                    _(kode ini berfungsi sebagai referensi struktur dan gaya penulisan)_
-
-                                    public function testDeleteNewsSuccess()
-                                    {
-                                        $user = User::factory()->create();
-                                        $this->actingAs($user);
-
-                                        News::factory()->create([
-                                            'url_img' => 'public/image/sample.jpg',
-                                        ]);
-
-                                        $news = News::first();
-
-                                        Storage::fake('public');
-                                        Storage::put('public/image/sample.jpg', 'content');
-
-                                        $this->assertDatabaseHas('news', ['id' => $news->id]);
-                                        $response = $this->post(route('deleteNews', $news->id));
-
-                                        $this->assertDatabaseMissing('news', ['id' => $news->id]);
-                                        Storage::disk('public')->assertMissing('image/sample.jpg');
-
-                                        $response->assertSessionHas('success', 'Data Berhasil Dihapus');
-                                    }
-                                    `
-                        }]
-                    }]
-                };
-
-                break;
-
-            case "migration":
-                promptRequest = {
-                    content: [{
-                        parts: [{
-                            text: `Saya adalah seorang programmer pemula yang sedang belajar mengenai unit test. Tolong buatkan code unit test menggunakan framework Laravel versi 11. Tujuan dari unit test ini adalah mencakup semua kemungkinan skenario (success, failure, error handling, dll.), tetapi tetap sederhana, mudah dipahami, dan langsung dapat dijalankan tanpa penyesuaian tambahan.
-        
-        Code yang akan diuji adalah sebagai berikut:
-        
-        ${code}
-        
-        ${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
-        
-        Route nya adalah sebagai berikut
-        ${route}
-        
-        Kriteria hasil unit test yang diharapkan:
-        
-        1. Hasil unit test berbentuk code PHP yang sesuai dengan PHPUnit versi terbaru.
-        2. Class unit test bernama TemporaryTest.
-        3. Semua skenario kemungkinan pada code harus tercakup dalam test case, seperti:
-            - Kondisi berhasil
-            - Validasi gagal
-            - Akses tidak diizinkan (jika ada middleware)
-            - Error yang mungkin terjadi, kecuali test case database error
-        4. Nama model dan factory harus mengikuti yang digunakan pada code.
-        5. Tidak perlu komentar atau penjelasan tambahan dalam kode unit test.
-        6. Semua model dan factory yang dibutuhkan sudah tersedia, jadi anda tinggal mendefinisikan saja.
-        7. Buat code unit test sesederhana mungkin, agar tidak dimengerti oleh programmer pemula.
-        
-        Output yang dihasilkan harus berupa:
-        
-            - Hanya code unit test tanpa penjelasan apa pun.
-            - Tidak ada penjelasan tentang cara penggunaannya.
-            - Kode siap ditempatkan dalam file test langsung tanpa pembersihan lebih lanjut.
-            - Tidak ada tag bahasa pemrograman dalam kode, seperti php, python, dll.
-        
-        Catatan:
-        Jika dalam code unit test yang dihasilkan terdapat penggunaaan Model maka model tersebut harus sudah diimport juga.
-        Contoh: $user = User::factory()->create();, maka diatasnya harus ada use App\Models\User;, dan hindari penggunaan $user = \App\Models\User::factory()->create(); secara langsung.
-        
-        Hindari penggunaan mock object dalam code unit test yang dihasilkan.
-        
-        Hasilkan code unit test sesuai dengan contoh code unit test berikut:
-        public function testDeleteNewsSuccess()
-        {
-            $user = User::factory()->create();
-            $this->actingAs($user);
-        
-            News::factory()->create([
-                'url_img' => 'public/image/sample.jpg',
+Dari kode yang ada anda apat menggunakan model User dan News.
+6. Untuk kode yang menggunakan storage, perhatikan penamaan filenya, karena itu akan memperngaruhi hasil dari unit test
+Contoh: 
+public function addImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:4000',
             ]);
-        
-            $news = News::first();
-        
-            Storage::fake('public');
-            Storage::put('public/image/sample.jpg', 'content');
-        
-            $this->assertDatabaseHas('news', ['id' => $news->id]);
-            $response = $this->post(route('deleteNews', $news->id));
-        
-            $this->assertDatabaseMissing('news', ['id' => $news->id]);
-            Storage::disk('public')->assertMissing('image/sample.jpg');
-        
-            $response->assertSessionHas('success', 'Data Berhasil Dihapus');
-        }`
-                        }]
-                    }]
-                };
-                break;
 
-            case "model":
-                {
-                    promptRequest = {
-                        content: [{
-                            parts: [{
-                                text: ""
-                            }]
-                        }]
-                    }
-                }
-                break
+            $imageName = time() . '.' . $request->image->extension();
+            $path = $request->image->storeAs('image', $imageName, 'public');
+            $imageUrl = "storage/" . $path;
 
-            default:
-                vscode.window.showErrorMessage("Jenis Kode tidak terdeteksi");
-                return;
+            Gallery::create([
+                'url_img' => $imageUrl,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return back()->with('success', 'Image uploaded successfully.');
+        } catch (\Throwable $th) {
+            return back()->with('failed', 'Failed to upload image.');
+        }
+    }
+Dari kode tersebut yang Anda harus perhatikan adalah nama file yang dirubah dan sedikit sulit.
+$imageName = time() . '.' . $request->image->extension();
+            $path = $request->image->storeAs('image', $imageName, 'public');
+            $imageUrl = "storage/" . $path;
+Kode seperti ini yang seperti ini yang harus Anda perhatikan.
+7. Database harus di reset setiap test dilakukan
+8. Untuk data yang membutuhkan seeder, kamu bisa memanggil seedernya, gunakan kode seperti berikut untuk setup seeder
+public function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DatabaseSeeder::class);
+    }
+
+9. Untuk semua kode tes yang Anda buat, Anda HARUS melakukan IMPORT classnya
+10. Untuk kode tes yang memungkinkan akan TERJADI ERROR saat dilakukan pengujian sebaiknya Anda JANGAN MEMBUATNYA.
+Tolong buat unit seperti beberapa contoh berikut agar menghasilkan kode yang konsisten
+public function testDashboardSuccess()
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->get('dashboard');
+
+        $response->assertStatus(200);
+
+        $response->assertViewIs('dashboard.pages.index');
+
+        $response->assertViewHas('user', $user);
+    }
+
+    public function testDashboardFailed()
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+
+        $response = $this->get('dashboard-failed');
+
+        $response->assertStatus(404);
+    }
+
+    public function testDashboardRedirect()
+    {
+        $response = $this->get('dashboard');
+
+        $response->assertStatus(302);
+
+        $response->assertRedirect('login');
+    }
+
+    public function testDeleteNewsSuccess()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        News::factory()->create([
+            'url_img' => 'public/image/sample.jpg',
+        ]);
+
+        $news = News::first();
+
+        Storage::fake('public');
+        Storage::put('public/image/sample.jpg', 'content');
+
+        $this->assertDatabaseHas('news', ['id' => $news->id]);
+        $response = $this->post(route('deleteNews', $news->id));
+
+        $this->assertDatabaseMissing('news', ['id' => $news->id]);
+        Storage::disk('public')->assertMissing('image/sample.jpg');
+
+        $response->assertSessionHas('success', 'Data Berhasil Dihapus');
+    }
+
+    public function testDeleteNewsNotFound()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $response = $this->post(route('deleteNews', 9999));
+
+        $response->assertSessionHas('failed', 'Data Gagal Dihapus');
+    }
+
+    public function testAddNewsSuccess()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $fakeImage = UploadedFile::fake()->image('image.jpg', 800, 600);
+
+        $dataBaru = [
+            'image' => $fakeImage,
+            'title' => 'Update',
+            'content' => 'Deskripsi news yang baru',
+        ];
+
+        $response = $this->post("/addNews", $dataBaru);
+
+        $response->assertSessionHas('success', 'News uploaded successfully.');
+
+        $this->assertDatabaseHas('news', [
+            'title' => 'Update',
+            'content' => 'Deskripsi news yang baru',
+        ]);
+    }
+
+    public function testUpdateNewsSuccess()
+    {
+        $this->testAddNewsSuccess();
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        $news = News::first();
+        $dataBaru = [
+            'title' => 'Update',
+            'content' => 'Deskripsi news yang baru',
+        ];
+
+        $response = $this->post("updateNews/{$news->id}", $dataBaru);
+
+        $result = News::findOrFail($news->id);
+        $this->assertEquals($dataBaru['title'], $result->title);
+
+        $response->assertSessionHas('success', 'News updated successfully.');
+    }
+`;
+                    break;
+                case "model":
+                    prompt = "";
+                case "apiController":
+                    prompt = `
+Anda adalah seorang SOFTWARE TESTER yang sangat ahli dalam kode tes untuk bahasa pemrograman. Anda tidak pernah melakukan KESALAHAN DALAM MEMBUAT KODE TES. Anda juga selalu DAPAT MELIHAT KELEMAHAN DARI SEBUAH KODE. Jadi tugas ANDA HANYA MEMBUAT KODE TES BERDASARKAN KODE YANG DIKIRIM TANPA HARUS MENJELASKAN APAPUN. Kode yang Anda harus buatkan tes-nya adalah kode yang bisa dimengerti oleh programmer pemula yang tidak memiliki pengalaman dalam membuat kode tes. Kode tes yang Anda buat HARUS sesederhana mungkin agar mudah dipahami oleh programmer pemula. 
+HASIL yang Anda berikan akan langsung dimasukan ke dalam sebuah file tes dan dijalankan pengujian. Jadi berikan hasilnya hanya berupa kode tes agar tidak ada penyesuaian yang perlu dilakukan. Berikut adalah potongan kode CONTROLLER SEBUAH API yang harus anda buatkan kode tes nya
+${code}
+${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
+${route ? `Route kode tersebut adalah sebagai berikut: ${route}` : ''}
+${atribut ? `Berikut adalah artibut yang ada pada file resource, jadi sesuikan datanya dengan atribut berikut: ${atribut}` : ''}
+${tableName ? `Berikut adalah nama model dan table yang digunakan pada databasenya: ${tableName}` : ''}
+                            
+Langkah-langkah yang harus dilakukan:
+1. class dibuat dengan nama TemporaryTest
+2. Kode tes yang dibuat harus mencakup berhasil, gagal, validasi, tanpa parameter
+3. Buat kode tes dengan menggunakan PHPUnit
+4. Buat kode tes tanpa menggunakan Mock
+5. Model, Factory dan Seeder sudah tersedia dan siap digunakan, untuk penamaan model Anda dapat melihat dari kode yang dikirimkan
+Contoh:
+public function show($id)
+    {
+        $module = ClassRoom::findorFail($id);
+        if (!$module) {
+            return new HttpResponseException(response()->json([
+                'errors' => [
+                    "message" => [
+                        "not found"
+                    ]
+                ]
+            ], 404));
         }
 
-        fetch(url, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify(promptRequest)
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                const generateTestCase = data['candidates'][0]['content']['parts'][0]['text'];
-                const cleanResponse = GenerateTestModule.cleanApiResponse(generateTestCase);
-                this.temporary.createTemporaryFile(cleanResponse);
-                this.unitTest.runUnitTestLaravel();
-            })
-            .catch(error => {
-                vscode.window.showErrorMessage(`There was a problem with the fetch operation: ${error.message}`);
-            });
+        return response()->json([
+            'data' => new ClassRoomResource($module)
+        ], 200);
+    }
+Dari kode yang ada anda apat menggunakan model ClassRoom.
+6. Untuk kode yang menggunakan storage, perhatikan penamaan filenya, karena itu akan memperngaruhi hasil dari unit test
+Contoh: 
+public function addImage(Request $request)
+    {
+        try {
+            $request->validate([
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:4000',
+            ]);
+
+            $imageName = time() . '.' . $request->image->extension();
+            $path = $request->image->storeAs('image', $imageName, 'public');
+            $imageUrl = "storage/" . $path;
+
+            Gallery::create([
+                'url_img' => $imageUrl,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            return back()->with('success', 'Image uploaded successfully.');
+        } catch (\Throwable $th) {
+            return back()->with('failed', 'Failed to upload image.');
+        }
+    }
+
+Berarti untuk kode tes-nya anda harus membuat seperti berikut
+$imageName = time() . '.' . $request->image->extension();
+$path = $request->image->storeAs('image', $imageName, 'public');
+$imageUrl = "storage/" . $path;
+
+7. Database harus di reset setiap test dilakukan
+8. Untuk data yang membutuhkan seeder, kamu bisa memanggil seedernya, gunakan kode seperti berikut untuk setup seeder
+public function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(DatabaseSeeder::class);
+    }
+
+9. Untuk semua kode tes yang Anda buat, Anda HARUS melakukan IMPORT classnya
+10. Untuk Reponse kode tes akan diberikan sebuah atribut sebagai informasi tambahan, tetapi untuk mencegah terjadinya error, Anda hanya perlu membuat response sesuai dengan kode inputnya
+Contoh: Sebagai contoh anda diberikan sebuah atribut [‘project_id’, ‘title’, ‘desc’, ‘module‘, ‘created_at’, ‘updated_at’, ’deleted_at’, ‘author’]. Tetapi dalam proses post data yang ada hanya project_id, title, desc dan module. Maka untuk kode tes yang anda tulis Anda hanya perlu menulis sesuai data yang ada pada kode saja. Ini berguna untuk mencegah terjadinya error.
+public function testAddNewTaskSuccess()
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+        $this->withHeaders([
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $user->token,
+        ])->post('/api/task/add', [
+            'project_id' => 1,
+            'title' => 'Mobile Dev',
+            'desc' => 'desc project',
+            'module' => 'Module Dev'
+        ])->assertStatus(201)
+            ->assertJson([
+                'data' => [
+                    'project_id' => 1,
+                    'title' => 'Mobile Dev',
+                    'desc' => 'desc project',
+                    'module' => 'Module Dev'
+                ]
+            ]);
+    }
+
+11. Jadi atribut yang Anda buat adalah
+public function testUpdateSchoolSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $school = School::query()->limit(1)->first();
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer '. $user->token,
+        ],
+    )->patch('/api/school/' . $school->id . '/update', [
+        'name' => 'Update School Name'
+    ])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'name' => 'Update School Name',
+                'duration_intern' => $school->duration_intern,
+            ]
+        ]);
+}
+12. Jika api menggunakan middleware atau jenis hak akses lain, Anda bisa menggunakan seperti kode dibawah
+
+public function testUpdateSchoolFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $school = School::query()->limit(1)->first();
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $user->token,
+        ],
+    )->patch('/api/school/' . $school->id + 100 . '/update', [
+        'name' => 'Update School Name'
+    ])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'School not found'
+            ]
+        ]);
+}
+
+public function testGetSchoolByIdSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $school = School::query()->limit(1)->first();
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer ' . $user->token,
+    ])->get('/api/school/' . $school->id, [])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'id' => $school->id,
+                'name' => $school->name,
+                'duration_intern' => $school->duration_intern,
+            ]
+        ]);
+}
+
+public function testGetSchoolByIdFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $school = School::query()->limit(1)->first();
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer ' . $user->token,
+    ])->get('/api/school/' . $school->id + 100, [])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'School not found'
+            ]
+        ]);
+}
+
+
+13. Untuk kode tes yang memungkinkan akan TERJADI ERROR saat dilakukan pengujian sebaiknya Anda JANGAN MEMBUATNYA.
+Contoh
+public function testGetSchoolByIdSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $school = School::query()->limit(1)->first();
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer ' . $user->token,
+    ])->get('/api/school/' . $school->id, [])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'id' => $school->id,
+                'name' => $school->name,
+                'duration_intern' => $school->duration_intern,
+                menambahkan parameter tambahan yang tidak Anda ketahui
+            ]
+        ]);
+}
+           
+Atribut yang pada assertJson itu adalah hasil dari proses pembuatan yang telah diverifikasi keberadaanya. Jadi Anda tidak perlu membuat atribut tambahan JIKA tidak memiliki informasi atas atribut atau kode yang ANDA terima.
+
+10. Untuk kode tes yang memungkinkan akan TERJADI ERROR saat dilakukan pengujian sebaiknya Anda JANGAN MEMBUATNYA.
+Tolong buat unit seperti beberapa contoh berikut agar menghasilkan kode yang konsisten
+public function testAddPresenceSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer '. $user->token,
+    ])->post('/api/presence/add', [
+        'status' => 'Hadir',
+        'day' => 1,
+    ])->assertStatus(201)
+        ->assertJson([
+            'data' => [
+                'user_id' => Auth::user()->id,
+                'status' => 'Hadir',
+                'day' => 1,
+            ]
+        ]);
+}
+
+public function testAddPresenceFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer '. $user->token,
+    ])->post('/api/presence/add', [])->assertStatus(400)
+        ->assertJson([
+            'errors' => [
+                'status' => [
+                    'The status field is required.'
+                ]
+            ]
+        ]);
+}
+
+public function testDeletePresenceSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $presence = Presence::query()->limit(1)->first();
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer ' . $user->token,
+    ])->delete('/api/presence/ ' . $presence->id . '/delete', [])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'message' => true,
+            ]
+        ]);
+}
+
+public function testDeletePresenceFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer ' . $user->token,
+    ])->delete('/api/presence/100/delete', [])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'Presence not found',
+            ]
+        ]);
+}
+
+public function testGetPresenceByUserIdSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer '. $user->token,
+    ])->get('/api/presence/3/user', [])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                [
+                    'user_id' => 3,
+                    'status' => 'Hadir',
+                ],
+                [
+                    'user_id' => 3,
+                    'status' => 'Sakit',
+                ],
+                [
+                    'user_id' => 3,
+                    'status' => 'Izin',
+                ],
+                [
+                    'user_id' => 3,
+                    'status' => 'Alpa',
+                ],
+            ]
+        ]);
+}
+
+public function testGetPresenceByUserIdFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer ' . $user->token,
+    ])->get('/api/presence/100/user', [])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'User not found'
+            ]
+        ]);
+}
+
+public function testUpdatePresenceSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $presence = Presence::query()->limit(1)->first();
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $user->token,
+        ],
+    )->patch('/api/presence/' . $presence->id . '/update', [
+        'status' => 'test'
+    ])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'status' => 'test',
+            ]
+        ]);
+}
+
+public function testUpdatePresenceFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $presence = Presence::query()->limit(1)->first();
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $user->token,
+        ],
+    )->patch('/api/presence/' . $presence->id + 10 . '/update', [
+        'status' => 'test'
+    ])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'Presence not found'
+            ]
+        ]);
+}
+public function testAllProjectUnauthorized()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer '. $user->token,
+    ])->get('/api/project', [])->assertStatus(401)
+        ->assertJson([
+            'message' => 'Unauthenticated.'
+        ]);
+}
+
+public function testGetProjectById()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $project = Project::first();
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer '. . $user->token,
+    ])->get('/api/project/' . $project->id, [])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'id' => $project->id,
+                'name' => 'Tasty Food',
+                'desc' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit',
+            ]
+        ]);
+}
+
+public function testGetProjectFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $project = Project::first();
+    $this->withHeaders([
+        'Accept' => 'application/json',
+        'Authorization' => 'Bearer '. . $user->token,
+    ])->get('/api/project/' . $project->id + 100, [])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'Project not found'
+            ]
+        ]);
+}
+
+public function testAddNewProjectSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer '. $user->token,
+        ],
+    )->post('/api/project/add/', [
+        'name' => 'Mobile Dev',
+        'desc' => 'desc project',
+        'asset' => 'asset Dev'
+    ])->assertStatus(201)
+        ->assertJson([
+            'data' => [
+                'name' => 'Mobile Dev',
+                'desc' => 'desc project',
+                'asset' => 'asset Dev'
+            ]
+        ]);
+}
+
+public function testAddNewProjectFailed()
+{
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer '. $user->token,
+        ],
+    )->post('/api/project/add/', [
+        'name' => 'Mobile Dev',
+        'desc' => 'desc project',
+    ])->assertStatus(400)
+        ->assertJson([
+            'errors' => [
+                'asset' => [
+                    'The asset field is required.'
+                ],
+            ]
+        ]);
+}
+
+public function testDeleteProjectSuccess()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $project = Project::query()->limit(1)->first();
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer '. $user->token,
+        ],
+    )->delete('/api/project/' . $project->id . '/delete', [])->assertStatus(200)
+        ->assertJson([
+            'data' => [
+                'message' => true,
+            ]
+        ]);
+}
+
+public function testDeleteProjectFailed()
+{
+    $user = User::factory()->create();
+    $this->actingAs($user);
+    $project = Project::query()->limit(1)->first();
+    $this->withHeaders(
+        [
+            'Accept' => 'application/json',
+            'Authorization' => 'Bearer ' . $user->token,
+        ],
+    )->delete('/api/project/' . $project->id + 10 . '/delete', [])->assertStatus(404)
+        ->assertJson([
+            'errors' => [
+                'message' => 'Project not found'
+            ]
+        ]);
+}
+                            `;
+                    break;
+                default:
+                    prompt = '';
+            }
+
+        }
+
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4.1',
+            messages: [{ role: 'user', content: prompt }],
+        });
+
+        const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
+
+        if (isLaravel) {
+            vscode.window.showInformationMessage(`Hasil ${response}`);
+            this.temporary.createTemporaryFileLaravel(cleanResponse);
+            this.unitTest.runUnitTestLaravel();
+        }
+
+        vscode.window.showInformationMessage("Request selesai");
+
     }
 
     static cleanApiResponse(response) {
-        return response
-            .replace(/```php/g, '')
-            .replace(/```/g, '')
-            .trim();
+        const match = response.match(/```(?:\w+)?\n([\s\S]*?)\n```/);
+        return match ? match[1].trim() : '';
     }
+
 }
 
 module.exports = GenerateTestModule;

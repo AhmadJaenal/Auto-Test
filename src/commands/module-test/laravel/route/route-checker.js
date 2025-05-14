@@ -20,22 +20,22 @@ class RouteChecker {
         }
     }
 
-    async checkRoute(functionCode) {
+    async checkRoute({ functionCode, isApiController = false }) {
         const workspaceChecker = new WorkspaceChecker();
-        
+
         if (workspaceChecker.checkWorkspace()) {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             const projectRoot = workspaceFolders[0].uri.fsPath;
-            const routeFilePath = path.join(projectRoot, 'routes', 'web.php');
+            const routeFilePath = path.join(projectRoot, 'routes', isApiController ? 'api.php' : 'web.php');
 
             const functionName = RouteChecker.getFunctionName(functionCode);
             const controllerName = RouteChecker.readControllerName();
 
             if (controllerName) {
                 const routeNamePattern = new RegExp(
-                    `Route::(get|post|put|delete)\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[\\s*${controllerName}::class\\s*,\\s*['"]${functionName}['"]\\s*\\](.*?)\\)\\s*;`,
+                    `Route::(get|post|put|delete|update|patch)\\(\\s*['"]([^'"]+)['"]\\s*,\\s*\\[\\s*${controllerName}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]\\s*\\)\\s*;`,
                     'gs'
-                  );
+                );
                 return new Promise((resolve, reject) => {
                     fs.readFile(routeFilePath, 'utf8', (err, data) => {
                         if (err) {

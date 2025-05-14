@@ -2,38 +2,40 @@ const vscode = require('vscode');
 const CodeSelector = require('../selector/code-selector');
 
 class TaskService {
-    constructor() {
-        this.codeSelector = new CodeSelector();
-    }
-
     async showTaskByProject(id) {
+
+        const codeSelector = new CodeSelector();
         const apiKey = vscode.workspace.getConfiguration('auto-unit-test').get('apiKey');
-        const apiUrl = `http://127.0.0.1:8000/api/task/project/${id}`;
+        const apiUrl = `http://127.0.0.1:8000/api/project/${id}/tasks`;
 
         vscode.window.showInformationMessage(apiUrl);
 
         try {
             const response = await fetch(apiUrl, {
                 headers: {
-                    'API-Key': apiKey,
+                    'X-API-Key': apiKey,
                     'Content-Type': 'application/json'
                 },
             });
 
             if (!response.ok) {
-                throw new Error(`Response Status: ${response.status}`);
+                throw new Error(`Response Code: ${response.status}`);
             }
 
             const result = await response.json();
             const data = result.data;
 
-            const projectList = data.map(item => item.title);
-            const selectedItem = await vscode.window.showQuickPick(projectList, {
-                placeHolder: 'Pilih tugas yang akan dilaporkan'
+            const taskList = data.map(task => ({
+                label: task.title,
+                id: task.id
+            }));
+
+            const selectedItem = await vscode.window.showQuickPick(taskList, {
+                placeHolder: 'Pilih tugas yang akan dibuatkan laporannya'
             });
 
             if (selectedItem) {
-                await this.codeSelector.selectCode();
+                await codeSelector.selectCode();
             } else {
                 vscode.window.showInformationMessage('Tidak ada yang dipilih');
             }

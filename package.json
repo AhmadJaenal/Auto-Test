@@ -28,19 +28,31 @@
     "commands": [
       {
         "command": "auto-unit-test.showProject",
-        "title": "Show My Project"
+        "title": "CyberTest: Show My Project"
       },
       {
         "command": "auto-unit-test.testController",
-        "title": "Test Controller"
+        "title": "CyberTest: Test Controller"
       },
       {
         "command": "auto-unit-test.generateFactoryFile",
-        "title": "Generate Factory File"
+        "title": "CyberTest: Generate Factory File"
       },
       {
         "command": "auto-unit-test.runTestLaravel",
-        "title": "Run Test Laravel"
+        "title": "CyberTest: Run Test Laravel"
+      },
+      {
+        "command": "auto-unit-test.testApiController",
+        "title": "CyberTest: Test API Controller"
+      },
+      {
+        "command": "auto-unit-test.updateApiKey",
+        "title": "CyberTest: Update API Key"
+      },
+      {
+        "command": "auto-unit-test.testOpenAi",
+        "title": "CyberTest: Test Open AI"
       }
     ]
   },

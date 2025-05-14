@@ -25,6 +25,45 @@ class UnitTestManager {
                 const formattedResults = this.formatTestResults(testResults);
 
                 const report = new ReportService();
+                // report.redirectToWeb(formattedResults);
+
+                if (error) {
+                    outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
+                } else {
+                    outputChannel.appendLine('Test berhasil dijalankan');
+                }
+            });
+
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
+        }
+    }
+
+    runUnitTestDart() {
+        try {
+            const workspaceFolders = vscode.workspace.workspaceFolders;
+            if (!workspaceFolders) {
+                throw new Error('No workspace folder found');
+            }
+
+            const projectRoot = workspaceFolders[0].uri.fsPath;
+            const outputChannel = vscode.window.createOutputChannel('Laravel Unit Test');
+            outputChannel.show();
+            outputChannel.appendLine('Menjalan unit test dart...');
+
+            const command = `cd "${projectRoot}" && 
+            flutter pub add --dev mockito
+            flutter pub add --dev test && 
+            flutter run test test/temporary_test.dart`;
+
+            exec(command, (error, stdout, stderr) => {
+                if (stdout) outputChannel.appendLine(stdout);
+                if (stderr) outputChannel.appendLine(stderr);
+
+                const testResults = this.parseTestOutput(stdout);
+                const formattedResults = this.formatTestResults(testResults);
+
+                const report = new ReportService();
                 report.redirectToWeb(formattedResults);
 
                 if (error) {
@@ -38,6 +77,8 @@ class UnitTestManager {
             vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
         }
     }
+
+
     parseTestOutput(output) {
         const lines = output.split('\n');
         const results = [];
