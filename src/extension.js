@@ -12,60 +12,70 @@ const TestOpenAI = require('./commands/test');
 /**
  * @param {vscode.ExtensionContext} context
  */
-function activate(context) {
-    const apiKeyHandler = new ApiKeyHandler();
-    const projectService = new ProjectService();
-    const codeSelector = new CodeSelector();
-    const modelFileReader = new ModelFileReader();
-    const unitTestManager = new UnitTestManager();
-
-    const testOpenAi = new TestOpenAI();
 
 
-    apiKeyHandler.askForApiKey();
+class Main {
+    constructor(context) {
+        this.context = context;
 
-    let updateApiKey = vscode.commands.registerCommand('auto-unit-test.updateApiKey', async () => {
-        apiKeyHandler.updateApiKey();
-    });
+        this.apiKeyHandler = new ApiKeyHandler();
+        this.projectService = new ProjectService();
+        this.codeSelector = new CodeSelector();
+        this.modelFileReader = new ModelFileReader();
+        this.unitTestManager = new UnitTestManager();
+        this.testOpenAi = new TestOpenAI();
+    }
 
-    let showDataList = vscode.commands.registerCommand('auto-unit-test.showProject', async () => {
-        await projectService.showProject();
-    });
+    registerCommands() {
+        this.apiKeyHandler.askForApiKey();
 
-    let testController = vscode.commands.registerCommand('auto-unit-test.testController', async () => {
-        codeSelector.selectCode({isApiController: false});
-    });
+        this.register('auto-unit-test.updateApiKey', () => {
+            this.apiKeyHandler.updateApiKey();
+        });
 
-    let textApiController = vscode.commands.registerCommand('auto-unit-test.testApiController', async () => {
-        codeSelector.selectCode({isApiController: true});
-    });
+        this.register('auto-unit-test.showProject', async () => {
+            await this.projectService.showProject();
+        });
 
-    let generateFactoryFile = vscode.commands.registerCommand('auto-unit-test.generateFactoryFile', async () => {
-        await modelFileReader.getModelFileNames();
-    });
+        this.register('auto-unit-test.testController', async () => {
+            this.codeSelector.selectCode({ isApiController: false });
+        });
 
-    let runTestLaravel = vscode.commands.registerCommand('auto-unit-test.runTestLaravel', async () => {
-        unitTestManager.runUnitTestLaravel();
-    });
+        this.register('auto-unit-test.testApiController', async () => {
+            this.codeSelector.selectCode({ isApiController: true });
+        });
 
-    let openAI = vscode.commands.registerCommand('auto-unit-test.testOpenAi', async () => {
-        testOpenAi.requestOpenAI();
-    });
+        this.register('auto-unit-test.generateFactoryFile', async () => {
+            await this.modelFileReader.getModelFileNames();
+        });
 
+        this.register('auto-unit-test.runTestLaravel', () => {
+            this.unitTestManager.runUnitTestLaravel();
+        });
 
-    context.subscriptions.push(updateApiKey);
-    context.subscriptions.push(showDataList);
-    context.subscriptions.push(testController);
-    context.subscriptions.push(generateFactoryFile);
-    context.subscriptions.push(runTestLaravel);
-    context.subscriptions.push(textApiController);
+        this.register('auto-unit-test.testOpenAi', () => {
+            this.testOpenAi.requestOpenAI();
+        });
 
-    context.subscriptions.push(openAI);
+        this.register('auto-unit-test.testDart', () => {
+            this.unitTestManager.runUnitTestDart();
+        });
+    }
+
+    register(commandId, callback) {
+        const disposable = vscode.commands.registerCommand(commandId, callback);
+        this.context.subscriptions.push(disposable);
+    }
 }
 
-function deactivate() { }
+function activate(context) {
+    const handler = new Main(context);
+    handler.registerCommands();
+}
+
+function deactivate() {}
 
 module.exports = {
     activate,
     deactivate
-}
+};
