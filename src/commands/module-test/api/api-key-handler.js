@@ -4,25 +4,33 @@ class ApiKeyHandler {
         const config = vscode.workspace.getConfiguration('auto-unit-test');
         let apiKey = config.get('apiKey');
 
+        const input = await vscode.window.showInputBox({
+            placeHolder: 'Masukkan API KEY',
+            prompt: 'API KEY wajib diisi'
+        });
 
-        if (apiKey) {
-            const input = await vscode.window.showInputBox({
-                placeHolder: 'Masukkan API KEY',
-                prompt: 'API KEY wajib diisi'
+        if (input) {
+            const response = await fetch('http://localhost:8000/api/check-key', {
+                method: 'GET',
+                headers: {
+                    'X-API-Key': input,
+                    'Content-Type': 'application/json'
+                }
             });
 
-            if (input) {
-                try {
-                    await config.update('apiKey', input, vscode.ConfigurationTarget.Global);
-                    vscode.window.showInformationMessage('API KEY berhasil diperbarui!');
-                } catch (error) {
-                    vscode.window.showErrorMessage('Gagal memperbarui API KEY: ' + error.message);
-                }
-            } else {
-                vscode.window.showErrorMessage('API KEY wajib ada');
+            const data = await response.json();
+
+            if (response.status == 401) {
+                vscode.window.showInformationMessage('Key tidak terdaftar pada sistem');
             }
+
+            if (response.status == 200) {
+                await config.update('apiKey', input, vscode.ConfigurationTarget.Global);
+                vscode.window.showInformationMessage('API KEY berhasil diperbarui!');
+            }
+
         } else {
-            vscode.window.showErrorMessage('API KEY belum ada, silakan buat baru terlebih dahulu.');
+            vscode.window.showErrorMessage('API KEY wajib ada');
         }
     }
 
