@@ -1,9 +1,8 @@
 const vscode = require('vscode');
 const { exec } = require('child_process');
 const ReportService = require('../../services/report-service');
-
 class UnitTestManager {
-    runUnitTestLaravel() {
+    runUnitTestLaravel(code) {
         try {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
@@ -17,21 +16,28 @@ class UnitTestManager {
 
             const command = `cd "${projectRoot}" && php artisan test --filter=TemporaryTest`;
 
-            exec(command, (error, stdout, stderr) => {
-                if (stdout) outputChannel.appendLine(stdout);
-                if (stderr) outputChannel.appendLine(stderr);
-
-                const testResults = this.parseTestOutput(stdout);
-                const formattedResults = this.formatTestResults(testResults);
+            exec(command, (error, stdout = '', stderr = '') => {
+                if (stdout) {
+                    outputChannel.appendLine(stdout);
+                }
+                if (stderr) {
+                    outputChannel.appendLine(stderr);
+                }
 
                 const report = new ReportService();
-                // report.redirectToWeb(formattedResults);
+                const output = stdout + stderr;
 
-                if (error) {
-                    outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
-                } else {
-                    outputChannel.appendLine('Test berhasil dijalankan');
+                if (output) {
+                    report.generateUnitTestReport(code, output);
                 }
+
+                report.redirectToWeb(output);
+
+                outputChannel.appendLine(
+                    error
+                        ? `Eksekusi test gagal: ${error.message}`
+                        : 'Test berhasil dijalankan'
+                );
             });
 
         } catch (error) {
@@ -39,7 +45,7 @@ class UnitTestManager {
         }
     }
 
-    runUnitTestDart() {
+    runUnitTestDart(code) {
         try {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
@@ -47,82 +53,37 @@ class UnitTestManager {
             }
 
             const projectRoot = workspaceFolders[0].uri.fsPath;
-            const outputChannel = vscode.window.createOutputChannel('Laravel Unit Test');
+            const outputChannel = vscode.window.createOutputChannel('Flutter Unit Test');
             outputChannel.show();
             outputChannel.appendLine('Menjalan unit test dart...');
 
-            const command = `cd "${projectRoot}" && 
-            flutter pub add --dev mockito
-            flutter pub add --dev test && 
-            flutter run test test/temporary_test.dart`;
+            const command = `cd "${projectRoot}" && flutter test test/temporary_test.dart`;
 
             exec(command, (error, stdout, stderr) => {
                 if (stdout) outputChannel.appendLine(stdout);
                 if (stderr) outputChannel.appendLine(stderr);
 
-                const testResults = this.parseTestOutput(stdout);
-                const formattedResults = this.formatTestResults(testResults);
+                report.redirectToWeb(output);
 
                 const report = new ReportService();
-                report.redirectToWeb(formattedResults);
+                const output = stdout + stderr;
+
+                if (output) {
+                    report.generateUnitTestReport(code, output);
+                }
+
+                report.redirectToWeb(output);
 
                 if (error) {
                     outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
                 } else {
-                    outputChannel.appendLine('Test berhasil dijalankan');
+                    outputChannel.appendLine('Test telah selesai');
                 }
             });
 
         } catch (error) {
             vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
         }
-    }
-
-
-    parseTestOutput(output) {
-        const lines = output.split('\n');
-        const results = [];
-        let currentTest = null;
-
-        for (const line of lines) {
-            if (line.includes('Tests\\')) {
-                const match = line.match(/(\w+)\s+(Tests\\[\w\\]+)/);
-                if (match) {
-                    currentTest = {
-                        status: match[1],
-                        class: match[2],
-                        tests: []
-                    };
-                    results.push(currentTest);
-                }
-            } else if (line.trim().startsWith('✓') || line.trim().startsWith('⨯')) {
-                const isSuccess = line.trim().startsWith('✓');
-                const match = line.match(/[✓⨯]\s+([\w\s]+)(?:\s+)(\d+\.\d+s)/);
-
-                if (match && currentTest) {
-                    currentTest.tests.push({
-                        name: match[1].trim(),
-                        passed: isSuccess,
-                        time: match[2]
-                    });
-                }
-            }
-        }
-
-        return results;
-    }
-
-    formatTestResults(results) {
-        let formatted = '<h2>Test Results</h2><ul>';
-        results.forEach(test => {
-            formatted += `<li><strong>${test.status}</strong> - <em>${test.class}</em><ul>`;
-            test.tests.forEach(t => {
-                formatted += `<li>${t.name}: ${t.passed ? '✔️' : '❌'} (${t.time})</li>`;
-            });
-            formatted += '</ul></li>';
-        });
-        formatted += '</ul>';
-        return formatted;
     }
 }
 

@@ -33,7 +33,7 @@ class RouteChecker {
 
             if (controllerName) {
                 const routePattern = new RegExp(
-                    `Route::\\s*(get|post|put|delete|patch|resource)\\s*\\(\\s*['"]([^'"]+)['"]\\s*,\\s*(?:\\[\\s*${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]|${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class)\\s*\\)\\s*;?`,
+                    `Route::\\s*(get|post|put|delete|patch|resource)\\s*\\(\\s*['"]([^'"]+)['"]\\s*,\\s*(?:\\[\\s*${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class\\s*,\\s*['"]${functionName}['"]\\s*\\]|${controllerName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}::class)\\s*\\)([\\s\\S]*?);`,
                     'gis'
                 );
 

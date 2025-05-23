@@ -1,7 +1,135 @@
 const vscode = require('vscode');
+const { OpenAI } = require('openai');
 
 class ReportService {
-    async redirectToWeb(resultUnitTest, taskId) {
+    async generateUnitTestReport(code, resultUnitTest) {
+        const openai = new OpenAI({
+            apiKey: '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'
+        });
+
+        const prompt = `
+        Anda berperan sebagai seorang Software Tester profesional.
+
+        Berikut ini adalah potongan kode program yang perlu Anda analisis:
+        ${code}
+
+        Kode tersebut telah melalui proses pengujian, dan berikut adalah hasil dari unit test yang dijalankan:
+        ${resultUnitTest}
+
+        Tugas Anda adalah:
+
+        1. Menganalisis kode program berdasarkan best practice pemrograman dan keterbacaan.
+        2. Menganalisis hasil unit test: apakah pengujian mencakup kasus yang tepat, dan apakah hasilnya sesuai harapan.
+        3. Mengidentifikasi kelemahan pada kode program dan/atau hasil pengujiannya.
+        4. Memberikan rekomendasi perbaikan yang konkret dan teknis, baik pada sisi kode maupun pengujian.
+
+        Format laporan yang harus Anda gunakan:
+
+        1. Ringkasan Eksekutif
+        Berikan ringkasan singkat mengenai status kode dan pengujian.
+
+        2. Analisis Kode
+        Jelaskan kualitas kode, potensi bug, readability, dan kemungkinan improvement.
+
+        3. Analisis Hasil Unit Test
+        Tinjau cakupan test, validitas, serta hasil yang dicapai.
+
+        4. Rekomendasi Perbaikan
+        Berikan saran teknis yang jelas, disertai justifikasi. Bila perlu, sertakan contoh perbaikan kode.
+
+        5. Kesimpulan
+        Simpulkan apakah kode tersebut dapat dianggap stabil/siap digunakan atau memerlukan revisi lebih lanjut.
+
+        Gunakan gaya bahasa profesional dan langsung pada poin, dengan fokus pada kualitas dan kejelasan analisis.
+        `;
+        const response = await openai.chat.completions.create({
+            model: 'gpt-4.1',
+            messages: [
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.3
+        });
+
+        const report = response.choices[0].message.content;
+
+        const panel = vscode.window.createWebviewPanel(
+            'sampleWebview',
+            'My Webview Panel',
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+            }
+        );
+
+        panel.webview.html = getWebviewContent(report);
+
+        function getWebviewContent(report) {
+            return `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+            <title>Laporan Unit Test</title>
+            <style>
+                body {
+                font-family: Arial, sans-serif;
+                padding: 2rem;
+                background-color: #f9f9f9;
+                }
+
+                h1 {
+                color: #333;
+                }
+
+                .report-container {
+                background-color: #fff;
+                border: 1px solid #ccc;
+                padding: 1rem;
+                margin-top: 1rem;
+                border-radius: 8px;
+                white-space: pre-wrap;
+                font-family: Consolas, monospace;
+                font-size: 0.95rem;
+                color: #222;
+                }
+
+                button {
+                margin-top: 2rem;
+                padding: 0.5rem 1rem;
+                background-color: #007acc;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                }
+
+                button:hover {
+                background-color: #005f99;
+                }
+            </style>
+            </head>
+            <body>
+            <h1>Laporan Hasil Unit Test</h1>
+
+            <div class="report-container">
+                ${report}
+            </div>
+
+            <button onclick="sayHello()">Klik Saya</button>
+
+            <script>
+                function sayHello() {
+                alert("Hello from inside Webview!");
+                }
+            </script>
+            </body>
+            </html>
+        `;
+        }
+    }
+
+    async redirectToWeb(resultUnitTest) {
         const report = `
             <h2><strong>LAPORAN HASIL KINERJA PENGEMBANGAN FITUR [Nama Fitur]</strong></h2>
             <h2>
@@ -100,11 +228,11 @@ class ReportService {
         `;
 
         const data = {
-            apiKey: '48e35ac83cb10acc68cec36c492c86053e728b4c973423cea300588afd9cd618',
+            apiKey: 'e2714f8565f136bef2e499f68df3b434f785a4c5fc6f25b07168968b69ce3f14',
             report: report
         };
 
-        const url = `http://127.0.0.1:8000/buat-laporan?taskId=${taskId}&${new URLSearchParams(data).toString()}`;
+        const url = `http://127.0.0.1:8000/buat-laporan?&${new URLSearchParams(data).toString()}`;
         await vscode.env.openExternal(vscode.Uri.parse(url));
     }
 }

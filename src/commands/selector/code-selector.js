@@ -3,6 +3,7 @@ const GenerateTestModule = require('../module-test/laravel/generate-test-case/ge
 
 const RouteChecker = require('../module-test/laravel/route/route-checker');
 const MiddlewareChecker = require('../module-test/laravel/route/middleware-checker');
+const PrefixChecker = require('../module-test/laravel/route/prefix-checker');
 
 // const ReadArtibutFactoryFile = require('../selector/core/read-atribut-factory-file');
 const MigrationProcessor = require('../module-test/laravel/generate-factory/core/migration-processor');
@@ -59,6 +60,7 @@ class CodeSelector {
         const createUnitTest = new GenerateTestModule();
         const routeChecker = new RouteChecker();
         const middlewareChecker = new MiddlewareChecker();
+        const prefixChecker = new PrefixChecker();
         const migrationProcessor = new MigrationProcessor();
         const resourceProcessor = new ResourceProcessor();
         const modelFileReader = new ModelFileReader();
@@ -66,13 +68,13 @@ class CodeSelector {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor found');
-            return;
+            // return;
         }
 
         const selection = editor.selection;
         if (selection.isEmpty) {
             vscode.window.showErrorMessage('Pilih kode yang akan di test!');
-            return;
+            // return;
         }
 
         const selectedText = editor.document.getText(selection);
@@ -85,20 +87,21 @@ class CodeSelector {
             case 'PHP':
                 if (!isApiController) {
                     if (isFunction) {
-                        const route = await routeChecker.checkRoute({ functionCode: selectedText });
-                        const middleware = await middlewareChecker.executeCheckMiddleware(route);
-                        const modelTableList = await modelFileReader.getTabelDatabaseFromModel();
-                        createUnitTest.generateUnitTest({ code: selectedText, route: route, isLaravel: true, tableName: modelTableList, middleware: middleware});
+                        // const route = await routeChecker.checkRoute({ functionCode: selectedText });
+                        // const middleware = await middlewareChecker.executeCheckMiddleware(route);
+                        // const prefix = await prefixChecker.executeCheckPrefix(route);
+                        // const modelTableList = await modelFileReader.getTabelDatabaseFromModel();
+                        createUnitTest.generateUnitTest({ code: selectedText, isLaravel: true});
                     }
-                    
+
                     if (isModel) {
                         const modelsName = CodeSelector.getLaravelModelName();
-                        
+
                         const modelMigrationPairs = await migrationProcessor.getFileNameMigration([modelsName]);
                         const atribut = await Promise.all(modelMigrationPairs.map(pair => migrationProcessor.readMigrationFiles(pair.file)));
-                        createUnitTest.generateUnitTest({ type: "model", code: selectedText, atribut: atribut });
+                        // createUnitTest.generateUnitTest({ type: "model", code: selectedText, atribut: atribut });
                     }
-                    
+
                     if (!isFunction && !isModel) {
                         vscode.window.showErrorMessage('Kode yang dipilih bukan merupakan fungsi dalam controller, model atau migration.');
                         return;
@@ -106,12 +109,13 @@ class CodeSelector {
                 }
 
                 if (isApiController) {
-                    const route = await routeChecker.checkRoute({ functionCode: selectedText , isApiController: true});
-                    const middleware = await middlewareChecker.executeCheckMiddleware(route);
-                    const modelTableList = await modelFileReader.getTabelDatabaseFromModel();
+                    // const route = await routeChecker.checkRoute({ functionCode: selectedText, isApiController: true });
+                    // const middleware = await middlewareChecker.executeCheckMiddleware(route);
+                    // const modelTableList = await modelFileReader.getTabelDatabaseFromModel();
+                    // const prefix = await prefixChecker.executeCheckPrefix(route);
                     const attributes = resourceProcessor.readResourceFile(selectedText);
-                    
-                    // createUnitTest.generateUnitTest({ code: selectedText, middleware: middleware, route: route, atribut: attributes, type: "apiController", isLaravel: true, tableName: modelTableList });
+
+                    createUnitTest.generateUnitTest({ code: selectedText, atribut: attributes, type: "apiController", isLaravel: true});
                 }
                 break;
             case 'Dart':

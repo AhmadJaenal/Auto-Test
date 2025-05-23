@@ -53,6 +53,10 @@
       {
         "command": "auto-unit-test.testOpenAi",
         "title": "CyberTest: Test Open AI"
+      },
+      {
+        "command": "auto-unit-test.testDart",
+        "title": "CyberTest: Test Dart"
       }
     ]
   },

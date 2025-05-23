@@ -8,7 +8,7 @@ class GenerateTestModule {
         this.temporary = new TemporaryFileModule();
         this.unitTest = new UnitTestManager();
     }
-    async generateUnitTest({ code, type = "controller", route = null, middleware = null, migration = null, atribut = null, isLaravel = false, isDart = false, tableName = [] }) {
+    async generateUnitTest({ code, type = "controller", route = null, prefix = null, middleware = null, migration = null, resource = null, isLaravel = false, isDart = false, tableName = [] }) {
         const openai = new OpenAI({
             apiKey: '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',
         });
@@ -19,681 +19,866 @@ class GenerateTestModule {
             switch (type) {
                 case "controller":
                     prompt = `
-Anda adalah seorang SOFTWARE TESTER yang sangat ahli dalam kode tes untuk bahasa pemrograman. Anda SANGAT JELI dalam membuat kode tes. Anda juga selalu DAPAT MELIHAT KELEMAHAN DARI SEBUAH KODE. Sekarang tugas ANDA adalah MEMBUAT KODE TES BERDASARKAN KODE YANG DIKIRIM TANPA HARUS MENJELASKAN APAPUN. Kode yang Anda harus buatkan tes-nya adalah kode yang bisa dimengerti oleh programmer pemula yang tidak memiliki pengalaman dalam membuat kode tes. Kode tes yang Anda buat HARUS sesederhana mungkin agar mudah dipahami oleh programmer pemula. 
-HASIL yang Anda berikan akan langsung dimasukan ke dalam sebuah file tes dan dijalankan pengujian. Jadi berikan hasilnya hanya berupa kode tes agar tidak ada penyesuaian yang perlu dilakukan. Berikut adalah potongan kode CONTROLLER yang harus anda buatkan kode tes nya
+Anda adalah seorang SOFTWARE TESTER profesional.
+Tugas Anda adalah membuat kode unit test sederhana menggunakan Mockery, agar dapat dimengerti dan dijalankan oleh programmer pemula.
+
+Tujuan 
+Buat kode unit test terhadap potongan kode controller di bawah ini.
 ${code}
-${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
-${route ? `Route kode tersebut adalah sebagai berikut: ${route}` : ''}
-${code}
-${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
-${route ? `Route kode tersebut adalah sebagai berikut: ${route}` : ''}
-${atribut ? `Berikut adalah artibut yang ada pada file resource, jadi sesuikan datanya dengan atribut berikut: ${atribut}` : ''}
-${tableName ? `Berikut adalah nama model dan table yang digunakan pada databasenya: ${tableName}` : ''}
+
+${resource ? 'Data resource yang digunakan memiliki atribut sebagai berikut:\n${atribut}\nSilakan sesuaikan data pada test dengan atribut tersebut.' : ''}
                             
-Langkah-langkah yang harus dilakukan:
-1. class dibuat dengan nama TemporaryTest
-2. Kode tes yang dibuat harus mencakup berhasil, gagal, validasi, tanpa parameter
-3. Buat kode tes dengan menggunakan PHPUnit
-4. Buat kode tes tanpa menggunakan Mock
-5. Model, Factory dan Seeder sudah tersedia dan siap digunakan, untuk penamaan model Anda dapat melihat dari kode yang dikirimkan
-Contoh:
-public function testDeleteNewsSuccess()
+ATURAN & FORMAT:
+1. "Nama class test harus: TemporaryTest"
+2. "Semua test menggunakan Mockery"
+3. "Seluruh pengujian dibuat dalam bentuk fungsi-fungsi public function test_*()"
+4. "Jangan menyertakan komentar atau penjelasan — hanya kode PHP test lengkap"
+5. "Tidak perlu output tambahan apapun selain kode"
+
+CAKUPAN TEST WAJIB (minimal 4 test):
+1. Test berhasil
+2. Test gagal
+3. Test validasi error atau exception
+4. Test tanpa parameter
+
+KETENTUAN TAMBAHAN
+1. Gunakan teknik mocking penuh (Mockery) untuk semua dependency eksternal (seperti Auth, View, Redirect, Request, dll)
+2. Jika terdapat pemanggilan terhadap library/helper eksternal, buat mock function-nya jika belum tersedia
+3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini:
+4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
+5. Jangan menggunakan PHPUnit, gunakan use Tests\\TestCase;
+
+public function test_login_return_view()
+{
+    View::shouldReceive('make')
+        ->once()
+        ->with('auth.login')
+        ->andReturn('test_view');
+
+    $controller = new class extends AuthController {
+        public function login()
+        {
+            return View::make('auth.login');
+        }
+    };
+
+    $response = $controller->login();
+
+    $this->assertEquals('test_view', $response);
+}
+
+STRUKTUR FILE
+Semua kode test harus berada dalam 1 file class berikut ini:
+<?php
+
+use PHPUnit\Framework\TestCase;
+use Mockery;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\View;
+
+class TemporaryTest extends TestCase
+{
+    protected function tearDown(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-
-        News::factory()->create([
-            'url_img' => 'public/image/sample.jpg',
-        ]);
-
-        $news = News::first();
-
-        Storage::fake('public');
-        Storage::put('public/image/sample.jpg', 'content');
-
-        $this->assertDatabaseHas('news', ['id' => $news->id]);
-        $response = $this->post(route('deleteNews', $news->id));
-
-        $this->assertDatabaseMissing('news', ['id' => $news->id]);
-        Storage::disk('public')->assertMissing('image/sample.jpg');
-
-        $response->assertSessionHas('success', 'Data Berhasil Dihapus');
+        Mockery::close();
+        parent::tearDown();
     }
 
-Dari kode yang ada anda apat menggunakan model User dan News.
-6. Untuk kode yang menggunakan storage, perhatikan penamaan filenya, karena itu akan memperngaruhi hasil dari unit test
-Contoh: 
-public function addImage(Request $request)
+    // 1. Test: User sudah login, redirect ke dashboard (berhasil)
+    public function test_login_user_already_logged_in_redirects_to_dashboard()
     {
-        try {
-            $request->validate([
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:4000',
-            ]);
+        // Mock Auth::check() return true
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn(true);
 
-            $imageName = time() . '.' . $request->image->extension();
-            $path = $request->image->storeAs('image', $imageName, 'public');
-            $imageUrl = "storage/" . $path;
+        // Mock Redirect::to('dashboard')
+        Redirect::shouldReceive('to')
+            ->with('dashboard')
+            ->andReturn('redirect_dashboard');
 
-            Gallery::create([
-                'url_img' => $imageUrl,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
+                }
+            }
+        };
 
-            return back()->with('success', 'Image uploaded successfully.');
-        } catch (\Throwable $th) {
-            return back()->with('failed', 'Failed to upload image.');
+        $result = $controller->login();
+
+        $this->assertEquals('redirect_dashboard', $result);
+    }
+
+    // 2. Test: User belum login, return view login (gagal login)
+    public function test_login_user_not_logged_in_returns_login_view()
+    {
+        // Mock Auth::check() return false
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn(false);
+
+        // Mock View::make
+        View::shouldReceive('make')
+            ->with('dashboard.pages.auth.login')
+            ->andReturn('login_view');
+
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
+                }
+            }
+        };
+
+        $result = $controller->login();
+
+        $this->assertEquals('login_view', $result);
+    }
+
+    // 3. Test: login dipanggil tanpa parameter (tanpa parameter)
+    public function test_login_without_parameters_works_well()
+    {
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn(false);
+
+        View::shouldReceive('make')
+            ->with('dashboard.pages.auth.login')
+            ->andReturn('login_view');
+
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
+                }
+            }
+        };
+
+        // Tidak ada parameter dikirim ke login()
+        $result = $controller->login();
+
+        $this->assertEquals('login_view', $result);
+    }
+
+    // 4. Test: Validasi/Exception pada Auth::check() (validasi/error)
+    public function test_login_auth_check_throws_exception()
+    {
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn('dashboard');
+
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
+                }
+            }
+        };
+
+        $result = $controller->login();
+        $this->assertEquals('dashboard', $result);
+    }
+
+    // 4. Test: Pengujian tidak menggunakan database, jadi gunakan cara berikut
+    public function test_add_menu_success()
+    {
+        // Mock Request dan validasi
+        $mockRequest = Mockery::mock(Request::class);
+        $mockRequest->shouldReceive('validate')->once()->andReturnTrue();
+
+        // Mock Image dengan extension dan storeAs
+        $mockImage = Mockery::mock();
+        $mockImage->shouldReceive('extension')->once()->andReturn('jpg');
+        $mockImage->shouldReceive('storeAs')->once()->with('image', Mockery::type('string'), 'public')->andReturn('image/123456789.jpg');
+
+        $mockRequest->image = $mockImage;
+        $mockRequest->food_name = 'Nasi Goreng';
+        $mockRequest->desc = 'Enak sekali';
+
+        // Buat fungsi Now() yang mengembalikan objek Carbon
+        if (!function_exists('Now')) {
+            function Now()
+            {
+                return Carbon::parse('2024-01-01 00:00:00');
+            }
+        }
+
+        $expectedData = [
+            'url_img' => 'storage/image/123456789.jpg',
+            'food_name' => 'Nasi Goreng',
+            'desc' => 'Enak sekali',
+            'created_at' => Now(),
+            'updated_at' => Now(),
+        ];
+
+        // Mock Food sebagai objek biasa (bukan alias)
+        $foodMock = Mockery::mock();
+        $foodMock->shouldReceive('create')->once()->with(Mockery::on(function ($arg) use ($expectedData) {
+            return
+                $arg['url_img'] === $expectedData['url_img']
+                && $arg['food_name'] === $expectedData['food_name']
+                && $arg['desc'] === $expectedData['desc']
+                && $arg['created_at'] instanceof Carbon
+                && $arg['updated_at'] instanceof Carbon;
+        }))->andReturnTrue();
+
+        // Mock Redirect facade
+        $mockRedirectResponse = Mockery::mock();
+        $mockRedirectResponse->shouldReceive('with')
+            ->with('success', 'Menu uploaded successfully.')
+            ->andReturn('redirect_success');
+
+        Redirect::shouldReceive('back')->once()->andReturn($mockRedirectResponse);
+
+        // Controller dengan dependency injection Food mock
+        $controller = new class($foodMock) {
+            protected $food;
+            public function __construct($food)
+            {
+                $this->food = $food;
+            }
+
+            public function addMenu($request)
+            {
+                $request->validate([
+                    'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                    'food_name' => 'required|string|max:255',
+                    'desc' => 'required|string',
+                ]);
+
+                $imageName = time() . '.' . $request->image->extension();
+                $path = $request->image->storeAs('image', $imageName, 'public');
+
+                try {
+                    $this->food->create([
+                        'url_img' => "storage/{$path}",
+                        'food_name' => $request->food_name,
+                        'desc' => $request->desc,
+                        'created_at' => Now(),
+                        'updated_at' => Now(),
+                    ]);
+
+                    return Redirect::back()->with('success', 'Menu uploaded successfully.');
+                } catch (\Throwable $th) {
+                    return Redirect::back()->with('failed', 'Failed to upload Menu.');
+                }
+            }
+        };
+
+        $result = $controller->addMenu($mockRequest);
+
+        $this->assertEquals('redirect_success', $result);
+    }
+}
+
+CATATAN TAMBAHAN
+Jika terdapat object yang digunakan seperti str, hash, uuid maka gunakan nilai secara eksplitit 
+berikut contohnya, pada kode ini terdapat kode Str
+$validated['short_description'] = Str::of($validated['description'])->limit(100);
+
+Maka kode unit test bisa seperti berikut
+$validated['short_description'] = "lorem ipsum";
+
+Jika kode program yang di tes menggunakan library tambahan, maka buatkan helpernya. 
+Berikut contoh kode unit test dengan pembuatan helper
+public function test_authentication_successful_login_redirect_to_dashboard()
+{
+    if (!function_exists('notify')) {
+        function notify()
+        {
+            return new class {
+                public function success($message, $title = null) {}
+                public function error($message, $title = null) {}
+            };
         }
     }
-Dari kode tersebut yang Anda harus perhatikan adalah nama file yang dirubah dan sedikit sulit.
-$imageName = time() . '.' . $request->image->extension();
-            $path = $request->image->storeAs('image', $imageName, 'public');
-            $imageUrl = "storage/" . $path;
-Kode seperti ini yang seperti ini yang harus Anda perhatikan.
-7. Database harus di reset setiap test dilakukan
-8. Untuk data yang membutuhkan seeder, kamu bisa memanggil seedernya, gunakan kode seperti berikut untuk setup seeder
-public function setUp(): void
-    {
-        parent::setUp();
-        $this->seed(DatabaseSeeder::class);
-    }
 
-9. Untuk semua kode tes yang Anda buat, Anda HARUS melakukan IMPORT classnya
-10. Untuk kode tes yang memungkinkan akan TERJADI ERROR saat dilakukan pengujian sebaiknya Anda JANGAN MEMBUATNYA.
-Tolong buat unit seperti beberapa contoh berikut agar menghasilkan kode yang konsisten
-public function testDashboardSuccess()
-    {
-        $user = User::factory()->create();
+    $request = Request::create('/login', 'POST', [
+        'email' => 'ahmad@gmail.com',
+        'password' => 'rahasia'
+    ]);
 
-        $this->actingAs($user);
+    Auth::shouldReceive('attempt')
+        ->once()
+        ->with([
+            'email' => 'ahmad@gmail.com',
+            'password' => 'rahasia'
+        ])
+        ->andReturn(true);
 
-        $response = $this->get('dashboard');
+    Route::get('/dashboard', function () {
+        return 'Dashboard';
+    })->name('dashboard.index');
 
-        $response->assertStatus(200);
+    $controller = new AuthController();
+    $response = $controller->authenticate($request);
 
-        $response->assertViewIs('dashboard.pages.index');
+    $this->assertInstanceOf(RedirectResponse::class, $response);
+    $this->assertTrue($response->isRedirect(route('dashboard.index')));
+}
 
-        $response->assertViewHas('user', $user);
-    }
+public function test_dashboard_returns_view_with_user()
+{
+    $mockUser = Mockery::mock(User::class);
 
-    public function testDashboardFailed()
-    {
-        $user = User::factory()->create();
+    Auth::shouldReceive('user')
+        ->once()
+        ->andReturn($mockUser);
 
-        $this->actingAs($user);
+    View::shouldReceive('make') 
+        ->once()
+        ->withArgs(function ($viewName, $data) use ($mockUser) {
+            return $viewName === 'dashboard.pages.index' &&
+                isset($data['user']) &&
+                $data['user'] === $mockUser;
+        })
+        ->andReturn(Mockery::mock(ViewInstance::class));
 
-        $response = $this->get('dashboard-failed');
+    $controller = new DashboardController();
+    $response = $controller->dashboard();
 
-        $response->assertStatus(404);
-    }
+    $this->assertInstanceOf(ViewInstance::class, $response);
+}
 
-    public function testDashboardRedirect()
-    {
-        $response = $this->get('dashboard');
 
-        $response->assertStatus(302);
+public function testActionLoginSuccess()
+{
+    // Mocking request data
+    $request = Request::create('/test', 'POST', [
+        'email' => 'user@example.com',
+        'password' => 'secret'
+    ]);
 
-        $response->assertRedirect('login');
-    }
+    // Mock Auth::attempt agar mengembalikan true
+    Auth::shouldReceive('attempt')
+        ->once()
+        ->with([
+            'email' => 'user@example.com',
+            'password' => 'secret'
+        ])
+        ->andReturn(true);
 
-    public function testDeleteNewsSuccess()
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+    $controller = new \App\Http\Controllers\AuthController();
+    $response = $controller->actionLogin($request);
 
-        News::factory()->create([
-            'url_img' => 'public/image/sample.jpg',
-        ]);
+    $this->assertEquals('http://localhost/dashboard', $response->getTargetUrl());
+}
 
-        $news = News::first();
+public function test_actionLogin_failed_back_with_error()
+{
+    $mockRequest = Mockery::mock(Request::class);
+    $mockRequest->shouldReceive('validate')->once()->andReturn([
+        'email' => 'wrong@example.com',
+        'password' => 'wrongpass',
+    ]);
 
-        Storage::fake('public');
-        Storage::put('public/image/sample.jpg', 'content');
+    Auth::shouldReceive('attempt')->once()->andReturn(false);
 
-        $this->assertDatabaseHas('news', ['id' => $news->id]);
-        $response = $this->post(route('deleteNews', $news->id));
+    $mockSessionStore = Mockery::mock(Store::class);
+    $mockSessionStore->shouldReceive('flash')
+        ->once()
+        ->with('failed', 'Email or password is wrong');
 
-        $this->assertDatabaseMissing('news', ['id' => $news->id]);
-        Storage::disk('public')->assertMissing('image/sample.jpg');
+    $this->app->instance('session.store', $mockSessionStore);
 
-        $response->assertSessionHas('success', 'Data Berhasil Dihapus');
-    }
+    $controller = new \App\Http\Controllers\AuthController();
 
-    public function testDeleteNewsNotFound()
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+    $response = $controller->actionLogin($mockRequest);
 
-        $response = $this->post(route('deleteNews', 9999));
+    $this->assertInstanceOf(RedirectResponse::class, $response);
 
-        $response->assertSessionHas('failed', 'Data Gagal Dihapus');
-    }
+    $this->assertTrue($response->isRedirection());
+}
 
-    public function testAddNewsSuccess()
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+public function test_actionLogin_validation_fails_if_email_and_password_empty()
+{
+    $this->expectException(ValidationException::class);
 
-        $fakeImage = UploadedFile::fake()->image('image.jpg', 800, 600);
+    $mockRequest = Mockery::mock(Request::class);
+    $mockRequest->shouldReceive('validate')
+        ->once()
+        ->andThrow(ValidationException::withMessages([
+            'email' => ['The email field is required.'],
+            'password' => ['The password field is required.'],
+        ]));
 
-        $dataBaru = [
-            'image' => $fakeImage,
-            'title' => 'Update',
-            'content' => 'Deskripsi news yang baru',
-        ];
+    $controller = new \App\Http\Controllers\AuthController();
 
-        $response = $this->post("/addNews", $dataBaru);
+    $controller->actionLogin($mockRequest);
+}
 
-        $response->assertSessionHas('success', 'News uploaded successfully.');
+protected function tearDown(): void
+{
+    \Mockery::close();
+    parent::tearDown();
+}
 
-        $this->assertDatabaseHas('news', [
-            'title' => 'Update',
-            'content' => 'Deskripsi news yang baru',
-        ]);
-    }
+public function test_dashboard_returns_view_with_user()
+{
+    $mockUser = Mockery::mock(User::class);
 
-    public function testUpdateNewsSuccess()
-    {
-        $this->testAddNewsSuccess();
-        $user = User::factory()->create();
-        $this->actingAs($user);
+    Auth::shouldReceive('user')
+        ->once()
+        ->andReturn($mockUser);
 
-        $news = News::first();
-        $dataBaru = [
-            'title' => 'Update',
-            'content' => 'Deskripsi news yang baru',
-        ];
+    View::shouldReceive('make')
+        ->once()
+        ->withArgs(function ($viewName, $data) use ($mockUser) {
+            return $viewName === 'dashboard.pages.index' &&
+                isset($data['user']) &&
+                $data['user'] === $mockUser;
+        })
+        ->andReturn(Mockery::mock(ViewInstance::class));
 
-        $response = $this->post("updateNews/{$news->id}", $dataBaru);
+    $controller = new DashboardController();
+    $response = $controller->dashboard();
 
-        $result = News::findOrFail($news->id);
-        $this->assertEquals($dataBaru['title'], $result->title);
+    $this->assertInstanceOf(ViewInstance::class, $response);
+}
 
-        $response->assertSessionHas('success', 'News updated successfully.');
-    }
+public function test_action_login_success()
+{
+    $request = Request::create('/test', 'POST', [
+        'email' => 'user@example.com',
+        'password' => 'secret'
+    ]);
+
+    Auth::shouldReceive('attempt')
+        ->once()
+        ->with([
+            'email' => 'user@example.com',
+            'password' => 'secret'
+        ])
+        ->andReturn(true);
+
+    $controller = new \App\Http\Controllers\AuthController();
+    $response = $controller->actionLogin($request);
+
+    $this->assertEquals('http://localhost/dashboard', $response->getTargetUrl());
+}
+
+public function test_actionLogin_failed_back_with_error()
+{
+    $mockRequest = Mockery::mock(Request::class);
+    $mockRequest->shouldReceive('validate')->once()->andReturn([
+        'email' => 'wrong@example.com',
+        'password' => 'wrongpass',
+    ]);
+
+    Auth::shouldReceive('attempt')->once()->andReturn(false);
+
+    $mockSessionStore = Mockery::mock(Store::class);
+    $mockSessionStore->shouldReceive('flash')
+        ->once()
+        ->with('failed', 'Email or password is wrong');
+
+    $this->app->instance('session.store', $mockSessionStore);
+
+    $controller = new \App\Http\Controllers\AuthController();
+
+    $response = $controller->actionLogin($mockRequest);
+
+    $this->assertInstanceOf(RedirectResponse::class, $response);
+
+    $this->assertTrue($response->isRedirection());
+}
+
+public function test_actionLogin_validation_fails_if_email_and_password_empty()
+{
+    $this->expectException(ValidationException::class);
+
+    $mockRequest = Mockery::mock(Request::class);
+    $mockRequest->shouldReceive('validate')
+        ->once()
+        ->andThrow(ValidationException::withMessages([
+            'email' => ['The email field is required.'],
+            'password' => ['The password field is required.'],
+        ]));
+
+    $controller = new \App\Http\Controllers\AuthController();
+
+    $controller->actionLogin($mockRequest);
+}
+
+public function test_addImage_failure()
+{
+    // Setup yang mirip seperti di atas, tetapi mensimulasikan kondisi gagal
+    $mockRequest = Mockery::mock(Request::class);
+    $mockRequest->shouldReceive('validate')->andThrow(new \Exception('Validation failed'));
+
+    $mockRedirectResponse = Mockery::mock(RedirectResponse::class);
+    $mockRedirectResponse->shouldReceive('with')
+        ->once()
+        ->with('failed', 'Failed to upload image.')
+        ->andReturnSelf();
+
+    $mockRedirect = Mockery::mock();
+    $mockRedirect->shouldReceive('back')->andReturn($mockRedirectResponse);
+    app()->instance('redirect', $mockRedirect);
+
+    $controller = new \App\Http\Controllers\GalleryDashboardController();
+    $result = $controller->addImage($mockRequest);
+
+    $this->assertInstanceOf(RedirectResponse::class, $result);
+}
+
+public function test_addImage_validation_fail_throws_exception()
+{
+    $mockRequest = Mockery::mock(Request::class);
+    $mockRequest->shouldReceive('validate')->once()->andThrow(new \Exception("Validation failed"));
+
+    $response = Mockery::mock(RedirectResponse::class);
+    $response->shouldReceive('with')->once()->with('failed', 'Failed to upload image.')->andReturnSelf();
+
+    app()->instance('redirect', Mockery::mock()->shouldReceive('back')->andReturn($response)->getMock());
+
+    $controller = new GalleryDashboardController();
+
+    $result = $controller->addImage($mockRequest);
+
+    $this->assertInstanceOf(RedirectResponse::class, $result);
+}
+
+public function test_login_user_already_logged_in_redirects_to_dashboard()
+{
+    Auth::shouldReceive('check')
+        ->once()
+        ->andReturn(true);
+
+    Redirect::shouldReceive('to')
+        ->with('dashboard')
+        ->andReturn('redirect_dashboard');
+
+    $controller = new class {
+        public function login() {
+            if (Auth::check()) {
+                return Redirect::to('dashboard');
+            } else {
+                return View::make('dashboard.pages.auth.login');
+            }
+        }
+    };
+
+    $result = $controller->login();
+
+    $this->assertEquals('redirect_dashboard', $result);
+}
+
+public function test_login_user_not_logged_in_returns_login_view()
+{
+    Auth::shouldReceive('check')
+        ->once()
+        ->andReturn(false);
+
+    View::shouldReceive('make')
+        ->with('dashboard.pages.auth.login')
+        ->andReturn('login_view');
+
+    $controller = new class {
+        public function login() {
+            if (Auth::check()) {
+                return Redirect::to('dashboard');
+            } else {
+                return View::make('dashboard.pages.auth.login');
+            }
+        }
+    };
+
+    $result = $controller->login();
+
+    $this->assertEquals('login_view', $result);
+}
+
+public function test_login_without_parameters_works_well()
+{
+    Auth::shouldReceive('check')
+        ->once()
+        ->andReturn(false);
+
+    View::shouldReceive('make')
+        ->with('dashboard.pages.auth.login')
+        ->andReturn('login_view');
+
+    $controller = new class {
+        public function login() {
+            if (Auth::check()) {
+                return Redirect::to('dashboard');
+            } else {
+                return View::make('dashboard.pages.auth.login');
+            }
+        }
+    };
+
+    // Tidak ada parameter dikirim ke login()
+    $result = $controller->login();
+
+    $this->assertEquals('login_view', $result);
+}
 `;
                     break;
                 case "model":
                     prompt = "";
                 case "apiController":
                     prompt = `
-Anda adalah seorang SOFTWARE TESTER yang sangat ahli dalam kode tes untuk bahasa pemrograman. Anda tidak pernah melakukan KESALAHAN DALAM MEMBUAT KODE TES. Anda juga selalu DAPAT MELIHAT KELEMAHAN DARI SEBUAH KODE. Jadi tugas ANDA HANYA MEMBUAT KODE TES BERDASARKAN KODE YANG DIKIRIM TANPA HARUS MENJELASKAN APAPUN. Kode yang Anda harus buatkan tes-nya adalah kode yang bisa dimengerti oleh programmer pemula yang tidak memiliki pengalaman dalam membuat kode tes. Kode tes yang Anda buat HARUS sesederhana mungkin agar mudah dipahami oleh programmer pemula. 
-HASIL yang Anda berikan akan langsung dimasukan ke dalam sebuah file tes dan dijalankan pengujian. Jadi berikan hasilnya hanya berupa kode tes agar tidak ada penyesuaian yang perlu dilakukan. Berikut adalah potongan kode CONTROLLER SEBUAH API yang harus anda buatkan kode tes nya
+Anda adalah seorang SOFTWARE TESTER profesional.
+Tugas Anda adalah membuat kode unit test sederhana menggunakan Mockery, agar dapat dimengerti dan dijalankan oleh programmer pemula.
+
+Tujuan 
+Buat kode unit test terhadap potongan kode API controller di bawah ini.
 ${code}
-${middleware ? `Code tersebut menggunakan middleware auth: ${middleware}.` : ''}
-${route ? `Route kode tersebut adalah sebagai berikut: ${route}` : ''}
-${atribut ? `Berikut adalah artibut yang ada pada file resource, jadi sesuikan datanya dengan atribut berikut: ${atribut}` : ''}
-${tableName ? `Berikut adalah nama model dan table yang digunakan pada databasenya: ${tableName}` : ''}
+
+${resource ? 'Data resource yang digunakan memiliki atribut sebagai berikut:\n${atribut}\nSilakan sesuaikan data pada test dengan atribut tersebut.' : ''}
                             
-Langkah-langkah yang harus dilakukan:
-1. class dibuat dengan nama TemporaryTest
-2. Kode tes yang dibuat harus mencakup berhasil, gagal, validasi, tanpa parameter
-3. Buat kode tes dengan menggunakan PHPUnit
-4. Buat kode tes tanpa menggunakan Mock
-5. Model, Factory dan Seeder sudah tersedia dan siap digunakan, untuk penamaan model Anda dapat melihat dari kode yang dikirimkan
-Contoh:
-public function show($id)
-    {
-        $module = ClassRoom::findorFail($id);
-        if (!$module) {
-            return new HttpResponseException(response()->json([
-                'errors' => [
-                    "message" => [
-                        "not found"
+ATURAN & FORMAT:
+1. "Nama class test harus: TemporaryTest"
+2. "Semua test menggunakan Mockery"
+3. "Seluruh pengujian dibuat dalam bentuk fungsi-fungsi public function test_*()"
+4. "Jangan menyertakan komentar atau penjelasan — hanya kode PHP test lengkap"
+5. "Tidak perlu output tambahan apapun selain kode"
+
+CAKUPAN TEST WAJIB (minimal 4 test):
+1. Test berhasil
+2. Test gagal
+3. Test validasi error atau exception
+4. Test tanpa parameter
+
+KETENTUAN TAMBAHAN
+1. Gunakan teknik mocking penuh (Mockery) untuk semua dependency eksternal (seperti Auth, View, Redirect, Request, dll)
+2. Jika terdapat pemanggilan terhadap library/helper eksternal, buat mock function-nya jika belum tersedia
+3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini:
+4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
+5. Jangan menggunakan PHPUnit, gunakan use Tests\\TestCase;
+6. Jangan mencoba me-mock suatu class dengan Mockery apabila class tersebut sudah dimuat oleh Laravel sebelum mock dibuat.
+
+Berikut contoh kode test yang bisa anda ikuti
+public function test_login_success()
+{
+    // Mock request dan validasi
+    $mockRequest = Mockery::mock(LoginRequest::class);
+    $mockRequest->shouldReceive('validate')->once()->andReturn([
+        'email' => 'user@gmail.com',
+        'password' => 'rahasia',
+    ]);
+
+    // Mock User model (buat sebagai dependency, bukan facade/alias)
+    $userMock = Mockery::mock();
+    $userMock->id = 1;
+    $userMock->email = 'user@gmail.com';
+    $userMock->password = bcrypt('rahasia');
+    $userMock->token = null;
+    $userMock->shouldReceive('save')->once();
+
+    // Mock Hash::check
+    Hash::shouldReceive('check')
+        ->once()
+        ->with('rahasia', $userMock->password)
+        ->andReturn(true);
+
+    // Mock User query builder (User::where()->first())
+    $userQueryBuilderMock = Mockery::mock();
+    $userQueryBuilderMock->shouldReceive('first')
+        ->once()
+        ->andReturn($userMock);
+
+    // Tidak perlu sebagai static alias, gunakan dependency injection pada controller:
+    $userModelMock = Mockery::mock();
+    $userModelMock->shouldReceive('where')
+        ->once()
+        ->with('email', 'user@gmail.com')
+        ->andReturn($userQueryBuilderMock);
+
+    // Mock UserResource (atau gunakan partial)
+    $userResourceMock = Mockery::mock(UserResource::class, [$userMock])->makePartial();
+    $this->instance(UserResource::class, $userResourceMock);
+
+    // Controller dengan dependency injection
+    $controller = new class($userModelMock) {
+        protected $user;
+        public function __construct($user)
+        {
+            $this->user = $user;
+        }
+        public function login($request)
+        {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+            ]);
+            $user = $this->user->where('email', $data['email'])->first();
+            if (!$user || !Hash::check($data['password'], $user->password)) {
+                throw new HttpResponseException(response([
+                    "status" => false,
+                    "errors" => [
+                        "message" => [
+                            "email or password wrong"
+                        ]
                     ]
-                ]
-            ], 404));
+                ], 401));
+            }
+            $user->token = 'fake-uuid-1234';
+            $user->save();
+            return new UserResource($user);
         }
+    };
 
-        return response()->json([
-            'data' => new ClassRoomResource($module)
-        ], 200);
-    }
-Dari kode yang ada anda apat menggunakan model ClassRoom.
-6. Untuk kode yang menggunakan storage, perhatikan penamaan filenya, karena itu akan memperngaruhi hasil dari unit test
-Contoh: 
-public function addImage(Request $request)
+    $result = $controller->login($mockRequest);
+
+    $this->assertInstanceOf(UserResource::class, $result);
+}
+
+
+STRUKTUR FILE
+Semua kode test harus berada dalam 1 file class berikut ini:
+<?php
+
+namespace Tests\Feature;
+
+use App\Http\Requests\Auth\LoginRequest;
+use App\Http\Requests\Auth\RegisterRequest;
+use App\Http\Resources\UserResource;
+use App\Models\User;
+use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Mockery;
+use Tests\TestCase;
+use Illuminate\Support\Facades\Str;
+
+class AuthMockTest extends TestCase
+{
+    use WithFaker;
+
+    public function test_login_success()
     {
-        try {
-            $request->validate([
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:4000',
-            ]);
+        // Mock request dan validasi
+        $mockRequest = Mockery::mock(LoginRequest::class);
+        $mockRequest->shouldReceive('validate')->once()->andReturn([
+            'email' => 'user@gmail.com',
+            'password' => 'rahasia',
+        ]);
 
-            $imageName = time() . '.' . $request->image->extension();
-            $path = $request->image->storeAs('image', $imageName, 'public');
-            $imageUrl = "storage/" . $path;
+        // Mock User model (buat sebagai dependency, bukan facade/alias)
+        $userMock = Mockery::mock();
+        $userMock->id = 1;
+        $userMock->email = 'user@gmail.com';
+        $userMock->password = bcrypt('rahasia');
+        $userMock->token = null;
+        $userMock->shouldReceive('save')->once();
 
-            Gallery::create([
-                'url_img' => $imageUrl,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+        // Mock Hash::check
+        Hash::shouldReceive('check')
+            ->once()
+            ->with('rahasia', $userMock->password)
+            ->andReturn(true);
 
-            return back()->with('success', 'Image uploaded successfully.');
-        } catch (\Throwable $th) {
-            return back()->with('failed', 'Failed to upload image.');
-        }
+        // Mock User query builder (User::where()->first())
+        $userQueryBuilderMock = Mockery::mock();
+        $userQueryBuilderMock->shouldReceive('first')
+            ->once()
+            ->andReturn($userMock);
+
+        // Tidak perlu sebagai static alias, gunakan dependency injection pada controller:
+        $userModelMock = Mockery::mock();
+        $userModelMock->shouldReceive('where')
+            ->once()
+            ->with('email', 'user@gmail.com')
+            ->andReturn($userQueryBuilderMock);
+
+        // Mock UserResource (atau gunakan partial)
+        $userResourceMock = Mockery::mock(UserResource::class, [$userMock])->makePartial();
+        $this->instance(UserResource::class, $userResourceMock);
+
+        // Controller dengan dependency injection
+        $controller = new class($userModelMock) {
+            protected $user;
+            public function __construct($user)
+            {
+                $this->user = $user;
+            }
+            public function login($request)
+            {
+                $data = $request->validate([
+                    'email' => ['required', 'email'],
+                    'password' => ['required', 'string'],
+                ]);
+                $user = $this->user->where('email', $data['email'])->first();
+                if (!$user || !Hash::check($data['password'], $user->password)) {
+                    throw new HttpResponseException(response([
+                        "status" => false,
+                        "errors" => [
+                            "message" => [
+                                "email or password wrong"
+                            ]
+                        ]
+                    ], 401));
+                }
+                $user->token = 'fake-uuid-1234';
+                $user->save();
+                return new UserResource($user);
+            }
+        };
+
+        $result = $controller->login($mockRequest);
+
+        $this->assertInstanceOf(UserResource::class, $result);
     }
 
-Berarti untuk kode tes-nya anda harus membuat seperti berikut
-$imageName = time() . '.' . $request->image->extension();
-$path = $request->image->storeAs('image', $imageName, 'public');
-$imageUrl = "storage/" . $path;
-
-7. Database harus di reset setiap test dilakukan
-8. Untuk data yang membutuhkan seeder, kamu bisa memanggil seedernya, gunakan kode seperti berikut untuk setup seeder
-public function setUp(): void
+    public function test_logout_success()
     {
-        parent::setUp();
-        $this->seed(DatabaseSeeder::class);
+        // Mock user model
+        $userMock = Mockery::mock();
+        $userMock->shouldReceive('save')->once();
+        $userMock->token = 'some-token';
+
+        // Mock Auth::user()
+        Auth::shouldReceive('user')->once()->andReturn($userMock);
+
+        // Controller anonim dengan dependency injection
+        $controller = new class {
+            public function logout(): \Illuminate\Http\JsonResponse
+            {
+                $user = \Illuminate\Support\Facades\Auth::user();
+                $user->token = null;
+                $user->save();
+
+                return response()->json([
+                    "message" => "Logout success",
+                    "data" => true,
+                ])->setStatusCode(200);
+            }
+        };
+
+        // Panggil method logout
+        $response = $controller->logout();
+
+        // Uji responsenya
+        $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $response);
+        $this->assertEquals(200, $response->status());
+
+        $responseData = $response->getData(true);
+
+        $this->assertEquals("Logout success", $responseData['message']);
+        $this->assertTrue($responseData['data']);
     }
 
-9. Untuk semua kode tes yang Anda buat, Anda HARUS melakukan IMPORT classnya
-10. Untuk Reponse kode tes akan diberikan sebuah atribut sebagai informasi tambahan, tetapi untuk mencegah terjadinya error, Anda hanya perlu membuat response sesuai dengan kode inputnya
-Contoh: Sebagai contoh anda diberikan sebuah atribut [‘project_id’, ‘title’, ‘desc’, ‘module‘, ‘created_at’, ‘updated_at’, ’deleted_at’, ‘author’]. Tetapi dalam proses post data yang ada hanya project_id, title, desc dan module. Maka untuk kode tes yang anda tulis Anda hanya perlu menulis sesuai data yang ada pada kode saja. Ini berguna untuk mencegah terjadinya error.
-public function testAddNewTaskSuccess()
+    protected function tearDown(): void
     {
-        $user = User::factory()->create();
-        $this->actingAs($user);
-        $this->withHeaders([
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer ' . $user->token,
-        ])->post('/api/task/add', [
-            'project_id' => 1,
-            'title' => 'Mobile Dev',
-            'desc' => 'desc project',
-            'module' => 'Module Dev'
-        ])->assertStatus(201)
-            ->assertJson([
-                'data' => [
-                    'project_id' => 1,
-                    'title' => 'Mobile Dev',
-                    'desc' => 'desc project',
-                    'module' => 'Module Dev'
-                ]
-            ]);
+        Mockery::close();
+        parent::tearDown();
     }
-
-11. Jadi atribut yang Anda buat adalah
-public function testUpdateSchoolSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $school = School::query()->limit(1)->first();
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer '. $user->token,
-        ],
-    )->patch('/api/school/' . $school->id . '/update', [
-        'name' => 'Update School Name'
-    ])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'name' => 'Update School Name',
-                'duration_intern' => $school->duration_intern,
-            ]
-        ]);
-}
-12. Jika api menggunakan middleware atau jenis hak akses lain, Anda bisa menggunakan seperti kode dibawah
-
-public function testUpdateSchoolFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $school = School::query()->limit(1)->first();
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer ' . $user->token,
-        ],
-    )->patch('/api/school/' . $school->id + 100 . '/update', [
-        'name' => 'Update School Name'
-    ])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'School not found'
-            ]
-        ]);
 }
 
-public function testGetSchoolByIdSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $school = School::query()->limit(1)->first();
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $user->token,
-    ])->get('/api/school/' . $school->id, [])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'id' => $school->id,
-                'name' => $school->name,
-                'duration_intern' => $school->duration_intern,
-            ]
-        ]);
-}
-
-public function testGetSchoolByIdFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $school = School::query()->limit(1)->first();
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $user->token,
-    ])->get('/api/school/' . $school->id + 100, [])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'School not found'
-            ]
-        ]);
-}
-
-
-13. Untuk kode tes yang memungkinkan akan TERJADI ERROR saat dilakukan pengujian sebaiknya Anda JANGAN MEMBUATNYA.
-Contoh
-public function testGetSchoolByIdSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $school = School::query()->limit(1)->first();
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $user->token,
-    ])->get('/api/school/' . $school->id, [])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'id' => $school->id,
-                'name' => $school->name,
-                'duration_intern' => $school->duration_intern,
-                menambahkan parameter tambahan yang tidak Anda ketahui
-            ]
-        ]);
-}
-           
-Atribut yang pada assertJson itu adalah hasil dari proses pembuatan yang telah diverifikasi keberadaanya. Jadi Anda tidak perlu membuat atribut tambahan JIKA tidak memiliki informasi atas atribut atau kode yang ANDA terima.
-
-10. Untuk kode tes yang memungkinkan akan TERJADI ERROR saat dilakukan pengujian sebaiknya Anda JANGAN MEMBUATNYA.
-Tolong buat unit seperti beberapa contoh berikut agar menghasilkan kode yang konsisten
-public function testAddPresenceSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer '. $user->token,
-    ])->post('/api/presence/add', [
-        'status' => 'Hadir',
-        'day' => 1,
-    ])->assertStatus(201)
-        ->assertJson([
-            'data' => [
-                'user_id' => Auth::user()->id,
-                'status' => 'Hadir',
-                'day' => 1,
-            ]
-        ]);
-}
-
-public function testAddPresenceFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer '. $user->token,
-    ])->post('/api/presence/add', [])->assertStatus(400)
-        ->assertJson([
-            'errors' => [
-                'status' => [
-                    'The status field is required.'
-                ]
-            ]
-        ]);
-}
-
-public function testDeletePresenceSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $presence = Presence::query()->limit(1)->first();
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $user->token,
-    ])->delete('/api/presence/ ' . $presence->id . '/delete', [])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'message' => true,
-            ]
-        ]);
-}
-
-public function testDeletePresenceFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $user->token,
-    ])->delete('/api/presence/100/delete', [])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'Presence not found',
-            ]
-        ]);
-}
-
-public function testGetPresenceByUserIdSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer '. $user->token,
-    ])->get('/api/presence/3/user', [])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                [
-                    'user_id' => 3,
-                    'status' => 'Hadir',
-                ],
-                [
-                    'user_id' => 3,
-                    'status' => 'Sakit',
-                ],
-                [
-                    'user_id' => 3,
-                    'status' => 'Izin',
-                ],
-                [
-                    'user_id' => 3,
-                    'status' => 'Alpa',
-                ],
-            ]
-        ]);
-}
-
-public function testGetPresenceByUserIdFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer ' . $user->token,
-    ])->get('/api/presence/100/user', [])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'User not found'
-            ]
-        ]);
-}
-
-public function testUpdatePresenceSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $presence = Presence::query()->limit(1)->first();
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer ' . $user->token,
-        ],
-    )->patch('/api/presence/' . $presence->id . '/update', [
-        'status' => 'test'
-    ])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'status' => 'test',
-            ]
-        ]);
-}
-
-public function testUpdatePresenceFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $presence = Presence::query()->limit(1)->first();
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer ' . $user->token,
-        ],
-    )->patch('/api/presence/' . $presence->id + 10 . '/update', [
-        'status' => 'test'
-    ])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'Presence not found'
-            ]
-        ]);
-}
-public function testAllProjectUnauthorized()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer '. $user->token,
-    ])->get('/api/project', [])->assertStatus(401)
-        ->assertJson([
-            'message' => 'Unauthenticated.'
-        ]);
-}
-
-public function testGetProjectById()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $project = Project::first();
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer '. . $user->token,
-    ])->get('/api/project/' . $project->id, [])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'id' => $project->id,
-                'name' => 'Tasty Food',
-                'desc' => 'Lorem ipsum dolor sit amet, consectetur adipiscing elit',
-            ]
-        ]);
-}
-
-public function testGetProjectFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $project = Project::first();
-    $this->withHeaders([
-        'Accept' => 'application/json',
-        'Authorization' => 'Bearer '. . $user->token,
-    ])->get('/api/project/' . $project->id + 100, [])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'Project not found'
-            ]
-        ]);
-}
-
-public function testAddNewProjectSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer '. $user->token,
-        ],
-    )->post('/api/project/add/', [
-        'name' => 'Mobile Dev',
-        'desc' => 'desc project',
-        'asset' => 'asset Dev'
-    ])->assertStatus(201)
-        ->assertJson([
-            'data' => [
-                'name' => 'Mobile Dev',
-                'desc' => 'desc project',
-                'asset' => 'asset Dev'
-            ]
-        ]);
-}
-
-public function testAddNewProjectFailed()
-{
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer '. $user->token,
-        ],
-    )->post('/api/project/add/', [
-        'name' => 'Mobile Dev',
-        'desc' => 'desc project',
-    ])->assertStatus(400)
-        ->assertJson([
-            'errors' => [
-                'asset' => [
-                    'The asset field is required.'
-                ],
-            ]
-        ]);
-}
-
-public function testDeleteProjectSuccess()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $project = Project::query()->limit(1)->first();
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer '. $user->token,
-        ],
-    )->delete('/api/project/' . $project->id . '/delete', [])->assertStatus(200)
-        ->assertJson([
-            'data' => [
-                'message' => true,
-            ]
-        ]);
-}
-
-public function testDeleteProjectFailed()
-{
-    $user = User::factory()->create();
-    $this->actingAs($user);
-    $project = Project::query()->limit(1)->first();
-    $this->withHeaders(
-        [
-            'Accept' => 'application/json',
-            'Authorization' => 'Bearer ' . $user->token,
-        ],
-    )->delete('/api/project/' . $project->id + 10 . '/delete', [])->assertStatus(404)
-        ->assertJson([
-            'errors' => [
-                'message' => 'Project not found'
-            ]
-        ]);
-}
                             `;
                     break;
                 default:
@@ -704,7 +889,10 @@ public function testDeleteProjectFailed()
 
         const response = await openai.chat.completions.create({
             model: 'gpt-4.1',
-            messages: [{ role: 'user', content: prompt }],
+            messages: [
+                { role: 'user', content: prompt }
+            ],
+            temperature: 0.3
         });
 
         const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
@@ -727,3 +915,102 @@ public function testDeleteProjectFailed()
 }
 
 module.exports = GenerateTestModule;
+
+
+// public function test_login_user_already_logged_in_redirects_to_dashboard()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andReturn(true);
+
+//         Redirect::shouldReceive('to')
+//             ->with('dashboard')
+//             ->andReturn('redirect_dashboard');
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         $result = $controller->login();
+
+//         $this->assertEquals('redirect_dashboard', $result);
+//     }
+
+//     public function test_login_user_not_logged_in_returns_login_view()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andReturn(false);
+
+//         View::shouldReceive('make')
+//             ->with('dashboard.pages.auth.login')
+//             ->andReturn('login_view');
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         $result = $controller->login();
+
+//         $this->assertEquals('login_view', $result);
+//     }
+
+//     public function test_login_without_parameters_works_well()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andReturn(false);
+
+//         View::shouldReceive('make')
+//             ->with('dashboard.pages.auth.login')
+//             ->andReturn('login_view');
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         // Tidak ada parameter dikirim ke login()
+//         $result = $controller->login();
+
+//         $this->assertEquals('login_view', $result);
+//     }
+
+//     public function test_login_auth_check_throws_exception()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andThrow(new Exception('Auth Check Failed'));
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         $this->expectException(Exception::class);
+//         $this->expectExceptionMessage('Auth Check Failed');
+
+//         $controller->login();
+//     }

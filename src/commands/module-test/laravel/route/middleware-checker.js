@@ -4,69 +4,74 @@ const fs = require('fs');
 const WorkspaceChecker = require('../../../../utils/check-workspace');
 
 class MiddlewareChecker {
-    static async checkMiddleware(route, data) {
+    /**
+     * Mengecek middleware yang ada pada sebuah route dan seluruh group.
+     * @param {string} checkedSingleRoute satu baris code route dari laravel
+     * @param {string} data seluruh isi file routes (web.php)
+     * @returns {Promise<string>} Daftar middleware yang ditemukan (dipisah koma)
+     */
+    static async checkMiddleware(checkedSingleRoute, data) {
         try {
-            const middlewarePattern = new RegExp(`->middleware\\(\\s*['"]([^'"]+)['"]\\s*\\)`, 'g');
+            let middlewaresFound = [];
 
-            const groupMiddlewarePattern = new RegExp(
-                `Route::middleware\\(([^)]*)\\)\\s*->group\\(\\s*function\\s*\\(\\)\\s*{`,
-                'g'
-            );
+            // vscode.window.showInformationMessage(`route yang akan di test ${checkedSingleRoute}`);
 
-            let match;
-            const middlewaresFound = [];
-            const middlewareGroup = [];
+            const routeMiddlewarePattern = /->middleware\s*\(\s*(\[[^\)]*\]|'[^']*'|"[^"]*")\s*\)/g;
+            let matchedRoute;
 
-            while ((match = middlewarePattern.exec(route)) !== null) {
-                middlewaresFound.push(match[1]);
+            while ((matchedRoute = routeMiddlewarePattern.exec(checkedSingleRoute)) !== null) {
+                let raw = matchedRoute[1].trim();
+
+                // Jika array, misalnya ['auth', 'verified']
+                if (raw.startsWith('[') && raw.endsWith(']')) {
+                    raw = raw.slice(1, -1); // hapus tanda kurung siku
+                    const names = raw.split(',').map(t => t.replace(/['"\s]/g, '').trim()).filter(Boolean);
+                    middlewaresFound.push(...names);
+                } else {
+                    // Satuan: 'auth' atau "auth"
+                    middlewaresFound.push(raw.replace(/['"]/g, '').trim());
+                }
             }
 
-            vscode.window.showInformationMessage(`Route yang akan dicari ${route}`)
+            // vscode.window.showInformationMessage(`Route yang akan dicari: ${checkedSingleRoute}`);
 
-            while ((match = groupMiddlewarePattern.exec(data)) !== null) {
-                const startIndex = match.index;
-                let braceCount = 0;
-                let endIndex = startIndex;
-                let started = false;
+            // ---- 2. Cek seluruh group middleware ----
+            // Route::middleware(['guest', 'web'])->group(function () { ... });
+            const groupPattern = /Route::middleware\s*\(\s*(\[.*?\]|'[^']*'|"[^"]*")\s*\)\s*->group\s*\(\s*function\s*\([^\)]*\)\s*\{\s*/gs;
+            let groupMatch;
 
-                for (let i = startIndex; i < data.length; i++) {
-                    const char = data[i];
+            while ((groupMatch = groupPattern.exec(data)) !== null) {
+                let groupMiddlewareRaw = groupMatch[1];
+                // get nama middleware di group
+                groupMiddlewareRaw = groupMiddlewareRaw.replace(/[\[\]'" ]/g, '');
+                let groupMiddlewares = groupMiddlewareRaw.split(',').filter(Boolean);
 
-                    if (char === '{') {
-                        braceCount++;
-                        started = true;
-                    } else if (char === '}') {
-                        braceCount--;
-                        if (braceCount === 0 && started) {
-                            endIndex = i + 1;
-                            break;
-                        }
-                    }
+                // Cari isi blok function group
+                let groupStart = groupMatch.index + groupMatch[0].length - 1;
+                let braceCount = 1;
+                let groupEnd = groupStart;
+                while (braceCount > 0 && groupEnd < data.length - 1) {
+                    groupEnd++;
+                    if (data[groupEnd] === '{') braceCount++;
+                    else if (data[groupEnd] === '}') braceCount--;
                 }
+                let groupCodeBlock = data.slice(groupStart + 1, groupEnd);
 
-                
-                let afterBlockIndex = endIndex;
-                while (afterBlockIndex < data.length && data[afterBlockIndex] !== ';') {
-                    afterBlockIndex++;
+                // Apakah checkedSingleRoute ada dalam group ini?
+                if (groupCodeBlock.includes(checkedSingleRoute)) {
+                    middlewaresFound.push(...groupMiddlewares);
                 }
-                afterBlockIndex++;
-
-                const fullGroupCode = data.slice(startIndex, afterBlockIndex);
-                const middlewareName = match[1];
-            
-                if (fullGroupCode.includes(route)) {
-                    middlewaresFound.push(middlewareName); 
-                }
-            
-                middlewareGroup.push(fullGroupCode);
             }
+
+            // ---- 3. Unikkan hasil (hilangkan duplikat) ----
+            middlewaresFound = [...new Set(middlewaresFound)].filter(Boolean);
 
             if (middlewaresFound.length > 0) {
                 vscode.window.showInformationMessage(`Middleware ditemukan: ${middlewaresFound.join(', ')}`);
                 return middlewaresFound.join(', ');
             } else {
-                vscode.window.showInformationMessage(`Middleware tidak ditemukan untuk route: ${route}`);
-                return middlewaresFound.join(', ');
+                vscode.window.showInformationMessage(`Middleware tidak ditemukan untuk route: ${checkedSingleRoute}`);
+                return '';
             }
         } catch (error) {
             console.error('Error checking middleware:', error);
@@ -77,7 +82,6 @@ class MiddlewareChecker {
 
     executeCheckMiddleware(route) {
         const workspace = new WorkspaceChecker();
-
         if (workspace.checkWorkspace()) {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             const projectRoot = workspaceFolders[0].uri.fsPath;
