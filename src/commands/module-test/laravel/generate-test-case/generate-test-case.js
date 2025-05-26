@@ -8,7 +8,7 @@ class GenerateTestModule {
         this.temporary = new TemporaryFileModule();
         this.unitTest = new UnitTestManager();
     }
-    async generateUnitTest({ code, type = "controller", route = null, prefix = null, middleware = null, migration = null, resource = null, isLaravel = false, isDart = false, tableName = [] }) {
+    async generateUnitTest({ code, type = "controller", route = null, prefix = null, middleware = null, migration = null, resource = null, isLaravel = false, isDart = false, tableName = [], attributeMigration = null, modelName = null}) {
         const openai = new OpenAI({
             apiKey: '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',
         });
@@ -26,7 +26,7 @@ Tujuan
 Buat kode unit test terhadap potongan kode controller di bawah ini.
 ${code}
 
-${resource ? 'Data resource yang digunakan memiliki atribut sebagai berikut:\n${atribut}\nSilakan sesuaikan data pada test dengan atribut tersebut.' : ''}
+${attributeMigration ? `Pada model ${modelName} terdapat beberapa atribut yaitu ${attributeMigration}` : ''}
                             
 ATURAN & FORMAT:
 1. "Nama class test harus: TemporaryTest"
@@ -44,9 +44,10 @@ CAKUPAN TEST WAJIB (minimal 4 test):
 KETENTUAN TAMBAHAN
 1. Gunakan teknik mocking penuh (Mockery) untuk semua dependency eksternal (seperti Auth, View, Redirect, Request, dll)
 2. Jika terdapat pemanggilan terhadap library/helper eksternal, buat mock function-nya jika belum tersedia
-3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini:
+3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini
 4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
 5. Jangan menggunakan PHPUnit, gunakan use Tests\\TestCase;
+6. Perhatikan penggunaan tanda ::, sebaiknya mengikuti contoh berikut
 
 public function test_login_return_view()
 {
@@ -626,8 +627,6 @@ public function test_login_without_parameters_works_well()
 }
 `;
                     break;
-                case "model":
-                    prompt = "";
                 case "apiController":
                     prompt = `
 Anda adalah seorang SOFTWARE TESTER profesional.
@@ -655,90 +654,8 @@ CAKUPAN TEST WAJIB (minimal 4 test):
 KETENTUAN TAMBAHAN
 1. Gunakan teknik mocking penuh (Mockery) untuk semua dependency eksternal (seperti Auth, View, Redirect, Request, dll)
 2. Jika terdapat pemanggilan terhadap library/helper eksternal, buat mock function-nya jika belum tersedia
-3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini:
-4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
-5. Jangan menggunakan PHPUnit, gunakan use Tests\\TestCase;
-6. Jangan mencoba me-mock suatu class dengan Mockery apabila class tersebut sudah dimuat oleh Laravel sebelum mock dibuat.
-
-Berikut contoh kode test yang bisa anda ikuti
-public function test_login_success()
-{
-    // Mock request dan validasi
-    $mockRequest = Mockery::mock(LoginRequest::class);
-    $mockRequest->shouldReceive('validate')->once()->andReturn([
-        'email' => 'user@gmail.com',
-        'password' => 'rahasia',
-    ]);
-
-    // Mock User model (buat sebagai dependency, bukan facade/alias)
-    $userMock = Mockery::mock();
-    $userMock->id = 1;
-    $userMock->email = 'user@gmail.com';
-    $userMock->password = bcrypt('rahasia');
-    $userMock->token = null;
-    $userMock->shouldReceive('save')->once();
-
-    // Mock Hash::check
-    Hash::shouldReceive('check')
-        ->once()
-        ->with('rahasia', $userMock->password)
-        ->andReturn(true);
-
-    // Mock User query builder (User::where()->first())
-    $userQueryBuilderMock = Mockery::mock();
-    $userQueryBuilderMock->shouldReceive('first')
-        ->once()
-        ->andReturn($userMock);
-
-    // Tidak perlu sebagai static alias, gunakan dependency injection pada controller:
-    $userModelMock = Mockery::mock();
-    $userModelMock->shouldReceive('where')
-        ->once()
-        ->with('email', 'user@gmail.com')
-        ->andReturn($userQueryBuilderMock);
-
-    // Mock UserResource (atau gunakan partial)
-    $userResourceMock = Mockery::mock(UserResource::class, [$userMock])->makePartial();
-    $this->instance(UserResource::class, $userResourceMock);
-
-    // Controller dengan dependency injection
-    $controller = new class($userModelMock) {
-        protected $user;
-        public function __construct($user)
-        {
-            $this->user = $user;
-        }
-        public function login($request)
-        {
-            $data = $request->validate([
-                'email' => ['required', 'email'],
-                'password' => ['required', 'string'],
-            ]);
-            $user = $this->user->where('email', $data['email'])->first();
-            if (!$user || !Hash::check($data['password'], $user->password)) {
-                throw new HttpResponseException(response([
-                    "status" => false,
-                    "errors" => [
-                        "message" => [
-                            "email or password wrong"
-                        ]
-                    ]
-                ], 401));
-            }
-            $user->token = 'fake-uuid-1234';
-            $user->save();
-            return new UserResource($user);
-        }
-    };
-
-    $result = $controller->login($mockRequest);
-
-    $this->assertInstanceOf(UserResource::class, $result);
-}
-
-
-STRUKTUR FILE
-Semua kode test harus berada dalam 1 file class berikut ini:
+3. Abaikan Str dan Hash
+4. Gunakan pattern dan struktur test seperti pada contoh di bawah ini:
 <?php
 
 namespace Tests\Feature;
@@ -879,12 +796,396 @@ class AuthMockTest extends TestCase
     }
 }
 
+5. Kode yang dibuat mengikuti contoh-contoh unit test berikut
+public function test_login_success()
+{
+    $mockRequest = Mockery::mock(LoginRequest::class);
+    $mockRequest->shouldReceive('validate')->once()->andReturn([
+        'email' => 'user@gmail.com',
+        'password' => 'rahasia',
+    ]);
+
+    $userMock = Mockery::mock();
+    $userMock->id = 1;
+    $userMock->email = 'user@gmail.com';
+    $userMock->password = bcrypt('rahasia');
+    $userMock->token = null;
+    $userMock->shouldReceive('save')->once();
+
+    Hash::shouldReceive('check')
+        ->once()
+        ->with('rahasia', $userMock->password)
+        ->andReturn(true);
+
+    $userQueryBuilderMock = Mockery::mock();
+    $userQueryBuilderMock->shouldReceive('first')
+        ->once()
+        ->andReturn($userMock);
+
+    $userModelMock = Mockery::mock();
+    $userModelMock->shouldReceive('where')
+        ->once()
+        ->with('email', 'user@gmail.com')
+        ->andReturn($userQueryBuilderMock);
+
+    $userResourceMock = Mockery::mock(UserResource::class, [$userMock])->makePartial();
+    $this->instance(UserResource::class, $userResourceMock);
+
+    $controller = new class($userModelMock) {
+        protected $user;
+        public function __construct($user)
+        {
+            $this->user = $user;
+        }
+        public function login($request)
+        {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+            ]);
+            $user = $this->user->where('email', $data['email'])->first();
+            if (!$user || !Hash::check($data['password'], $user->password)) {
+                throw new HttpResponseException(response([
+                    "status" => false,
+                    "errors" => [
+                        "message" => [
+                            "email or password wrong"
+                        ]
+                    ]
+                ], 401));
+            }
+            $user->token = 'fake-uuid-1234';
+            $user->save();
+            return new UserResource($user);
+        }
+    };
+
+    $result = $controller->login($mockRequest);
+
+    $this->assertInstanceOf(UserResource::class, $result);
+}
+
+public function test_login_failed_wrong_password()
+{
+    $mockRequest = Mockery::mock(LoginRequest::class);
+    $mockRequest->shouldReceive('validate')->once()->andReturn([
+        'email' => 'user@gmail.com',
+        'password' => 'salah',
+    ]);
+
+    $userMock = Mockery::mock();
+    $userMock->id = 1;
+    $userMock->email = 'user@gmail.com';
+    $userMock->password = bcrypt('rahasia');
+    $userMock->token = null;
+
+    Hash::shouldReceive('check')
+        ->once()
+        ->with('salah', $userMock->password)
+        ->andReturn(false);
+
+    $userQueryBuilderMock = Mockery::mock();
+    $userQueryBuilderMock->shouldReceive('first')
+        ->once()
+        ->andReturn($userMock);
+
+    $userModelMock = Mockery::mock();
+    $userModelMock->shouldReceive('where')
+        ->once()
+        ->with('email', 'user@gmail.com')
+        ->andReturn($userQueryBuilderMock);
+
+    $controller = new class($userModelMock) {
+        protected $user;
+        public function __construct($user)
+        {
+            $this->user = $user;
+        }
+        public function login($request)
+        {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+            ]);
+            $user = $this->user->where('email', $data['email'])->first();
+            if (!$user || !Hash::check($data['password'], $user->password)) {
+                throw new HttpResponseException(response([
+                    "status" => false,
+                    "errors" => [
+                        "message" => [
+                            "email or password wrong"
+                        ]
+                    ]
+                ], 401));
+            }
+            $user->token = 'fake-uuid-1234';
+            $user->save();
+            return new UserResource($user);
+        }
+    };
+
+    $this->expectException(HttpResponseException::class);
+    $controller->login($mockRequest);
+}
+
+public function test_login_validation_exception()
+{
+    $mockRequest = Mockery::mock(LoginRequest::class);
+    $mockRequest->shouldReceive('validate')
+        ->once()
+        ->andThrow(new HttpResponseException(response([
+            "status" => false,
+            "errors" => [
+                "message" => [
+                    "validation error"
+                ]
+            ]
+        ], 422)));
+
+    $userModelMock = Mockery::mock();
+
+    $controller = new class($userModelMock) {
+        protected $user;
+        public function __construct($user)
+        {
+            $this->user = $user;
+        }
+        public function login($request)
+        {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+            ]);
+            $user = $this->user->where('email', $data['email'])->first();
+            if (!$user || !Hash::check($data['password'], $user->password)) {
+                throw new HttpResponseException(response([
+                    "status" => false,
+                    "errors" => [
+                        "message" => [
+                            "email or password wrong"
+                        ]
+                    ]
+                ], 401));
+            }
+            $user->token = 'fake-uuid-1234';
+            $user->save();
+            return new UserResource($user);
+        }
+    };
+
+    $this->expectException(HttpResponseException::class);
+    $controller->login($mockRequest);
+}
+
+public function test_login_without_parameter()
+{
+    $mockRequest = Mockery::mock(LoginRequest::class);
+    $mockRequest->shouldReceive('validate')
+        ->once()
+        ->andThrow(new HttpResponseException(response([
+            "status" => false,
+            "errors" => [
+                "message" => [
+                    "missing parameters"
+                ]
+            ]
+        ], 422)));
+
+    $userModelMock = Mockery::mock();
+
+    $controller = new class($userModelMock) {
+        protected $user;
+        public function __construct($user)
+        {
+            $this->user = $user;
+        }
+        public function login($request)
+        {
+            $data = $request->validate([
+                'email' => ['required', 'email'],
+                'password' => ['required', 'string'],
+            ]);
+            $user = $this->user->where('email', $data['email'])->first();
+            if (!$user || !Hash::check($data['password'], $user->password)) {
+                throw new HttpResponseException(response([
+                    "status" => false,
+                    "errors" => [
+                        "message" => [
+                            "email or password wrong"
+                        ]
+                    ]
+                ], 401));
+            }
+            $user->token = 'fake-uuid-1234';
+            $user->save();
+            return new UserResource($user);
+        }
+    };
+
+    $this->expectException(HttpResponseException::class);
+    $controller->login($mockRequest);
+}
+
+6. Jangan menggunakan PHPUnit, gunakan use Tests\\TestCase;
+7. Jangan mencoba membuat mock suatu class dengan Mockery apabila class tersebut sudah dimuat oleh Laravel sebelum mock dibuat.
                             `;
                     break;
                 default:
                     prompt = '';
             }
 
+        }
+
+        if (isDart) {
+            switch (type) {
+                case "dart Controller":
+                    prompt = `
+Anda adalah seorang SOFTWARE TESTER profesional.
+Tugas Anda adalah membuat kode unit test sederhana menggunakan Mockito, agar dapat dimengerti dan dijalankan oleh programmer pemula.
+
+Tujuan 
+Buat kode unit test terhadap potongan kode function di bawah ini.
+${code}
+
+${attributes ? `Attribut yang digunakan pada model yaitu sebagai berikut:\n ${attributes} \nSilakan sesuaikan data pada test dengan atribut tersebut.` : ''}
+                            
+ATURAN & FORMAT:
+1. "Nama method harus: main"
+2. "Semua test menggunakan Mockito"
+3. "Seluruh pengujian dibuat dalam bentuk fungsi-fungsi public function test()"
+4. "Jangan menyertakan komentar atau penjelasan — hanya kode Dart test lengkap"
+5. "Tidak perlu output tambahan apapun selain kode"
+
+CAKUPAN TEST WAJIB (minimal 4 test):
+1. Test berhasil
+2. Test gagal
+3. Test validasi error atau exception
+4. Test tanpa parameter
+
+KETENTUAN TAMBAHAN
+1. Gunakan teknik mocking penuh (Mockito) untuk semua dependency eksternal 
+2. Jika terdapat pemanggilan terhadap library/helper eksternal, buat mock function-nya jika belum tersedia
+3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini:
+4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
+group('ClassroomController', () {
+    late MockClient mockClient;
+    late ClassroomController controller;
+
+    setUp(() {
+      mockClient = MockClient();
+      controller = ClassroomController(client: mockClient);
+    });
+
+    test('fetchClassrooms returns list of Classroom if status code is 200',
+        () async {
+      final fakeJson = jsonEncode({
+        'data': [
+          {
+            'id': 1,
+            'name': 'Kelas A',
+            'code': 'KA123',
+            'capacity': 30,
+            'description': 'Deskripsi kelas A',
+            'teacher_id': 10,
+            'start_date': '2025-01-01',
+            'end_date': '2025-06-30',
+          },
+        ]
+      });
+
+      when(mockClient.get(Uri.parse(\${URLs.baseURL}\${URLs.classrooms}')))
+          .thenAnswer((_) async => http.Response(fakeJson, 200));
+
+      final result = await controller.fetchClassrooms();
+
+      expect(result, isA<List<Classroom>>());
+      expect(result.length, 1);
+      expect(result.first.name, 'Kelas A');
+      expect(result.first.code, 'KA123');
+      expect(result.first.description, 'Deskripsi kelas A');
+      expect(result.first.teacherId, 10);
+    });
+
+    test('fetchClassrooms throws Exception if status code is not 200',
+        () async {
+      when(mockClient.get(Uri.parse('\${URLs.baseURL}\${URLs.classrooms}')))
+          .thenAnswer((_) async => http.Response('Not found', 404));
+
+      expect(() async => await controller.fetchClassrooms(), throwsException);
+    });
+  });
+
+STRUKTUR FILE
+Semua kode test harus berada dalam 1 file class berikut ini:
+import 'dart:convert';
+
+import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:mockito/annotations.dart';
+import 'package:mockito/mockito.dart';
+
+import 'package:school_app/controllers/classroom_controller.dart';
+import 'package:school_app/models/classroom.dart';
+import 'package:school_app/api/urls.dart';
+
+import 'temporary_test.mocks.dart';
+
+@GenerateMocks([http.Client])
+void main() {
+  group('ClassroomController', () {
+    late MockClient mockClient;
+    late ClassroomController controller;
+
+    setUp(() {
+      mockClient = MockClient();
+      controller = ClassroomController(client: mockClient);
+    });
+
+    test('fetchClassrooms returns list of Classroom if status code is 200',
+        () async {
+      final fakeJson = jsonEncode({
+        'data': [
+          {
+            'id': 1,
+            'name': 'Kelas A',
+            'code': 'KA123',
+            'capacity': 30,
+            'description': 'Deskripsi kelas A',
+            'teacher_id': 10,
+            'start_date': '2025-01-01',
+            'end_date': '2025-06-30',
+          },
+        ]
+      });
+
+      when(mockClient.get(Uri.parse('\${URLs.baseURL}\${URLs.classrooms}')))
+          .thenAnswer((_) async => http.Response(fakeJson, 200));
+
+      final result = await controller.fetchClassrooms();
+
+      expect(result, isA<List<Classroom>>());
+      expect(result.length, 1);
+      expect(result.first.name, 'Kelas A');
+      expect(result.first.code, 'KA123');
+      expect(result.first.description, 'Deskripsi kelas A');
+      expect(result.first.teacherId, 10);
+    });
+
+    test('fetchClassrooms throws Exception if status code is not 200',
+        () async {
+      when(mockClient.get(Uri.parse('\${URLs.baseURL}\${URLs.classrooms}')))
+          .thenAnswer((_) async => http.Response('Not found', 404));
+
+      expect(() async => await controller.fetchClassrooms(), throwsException);
+    });
+  });
+}
+
+                    `;
+                    break;
+                default:
+                    prompt = '';
+            }
         }
 
         const response = await openai.chat.completions.create({
@@ -896,11 +1197,16 @@ class AuthMockTest extends TestCase
         });
 
         const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
+        vscode.window.showInformationMessage(`response AI ${cleanResponse}`);
 
         if (isLaravel) {
-            vscode.window.showInformationMessage(`Hasil ${response}`);
             this.temporary.createTemporaryFileLaravel(cleanResponse);
             this.unitTest.runUnitTestLaravel();
+        }
+
+        if (isDart) {
+            this.temporary.createTemporaryFileDart(cleanResponse);
+            this.unitTest.runUnitTestDart();
         }
 
         vscode.window.showInformationMessage("Request selesai");
