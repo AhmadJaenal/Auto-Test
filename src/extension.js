@@ -35,14 +35,6 @@ class Main {
         this.register('auto-unit-test.runTestLaravel', () => {
             this.unitTestManager.runUnitTestLaravel();
         });
-
-        this.register('auto-unit-test.testOpenAi', () => {
-            this.testOpenAi.requestOpenAI();
-        });
-
-        this.register('auto-unit-test.testDart', () => {
-            this.unitTestManager.runUnitTestDart();
-        });
     }
 
     register(commandId, callback) {

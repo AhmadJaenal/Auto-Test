@@ -1,15 +1,10 @@
 const vscode = require('vscode');
 const GenerateTestModule = require('../module-test/laravel/generate-test-case/generate-test-case');
-
-const RouteChecker = require('../module-test/laravel/route/route-checker');
-const MiddlewareChecker = require('../module-test/laravel/route/middleware-checker');
-
 const MigrationProcessor = require('../module-test/laravel/generate-factory/core/migration-processor');
 const ResourceProcessor = require('../module-test/laravel/resource/get-resource');
 
 const WorkspaceChecker = require('../../utils/check-workspace');
 const PathImportDart = require('../module-test/flutter/get-path-import');
-const ModelFileReader = require('../module-test/laravel/generate-factory/core/model-file-reader');
 
 class CodeSelector {
     static isFunctionDart(code) {
@@ -48,7 +43,6 @@ class CodeSelector {
         return null;
     }
 
-
     static getUsedModels(code) {
         const modelUsagePattern = /\b([A-Z][a-zA-Z0-9_]*)::/g;
         const models = [];
@@ -65,18 +59,17 @@ class CodeSelector {
         const createUnitTest = new GenerateTestModule();
         const migrationProcessor = new MigrationProcessor();
         const resourceProcessor = new ResourceProcessor();
-        const modelFileReader = new ModelFileReader();
 
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
             vscode.window.showErrorMessage('No active editor found');
-            // return;
+            return;
         }
 
         const selection = editor.selection;
         if (selection.isEmpty) {
             vscode.window.showErrorMessage('Pilih kode yang akan di test!');
-            // return;
+            return;
         }
 
         const selectedText = editor.document.getText(selection);
@@ -102,9 +95,6 @@ class CodeSelector {
                 }
 
                 if (isApiController) {
-                    // const route = await routeChecker.checkRoute({ functionCode: selectedText, isApiController: true });
-                    // const middleware = await middlewareChecker.executeCheckMiddleware(route);
-                    // const modelTableList = await modelFileReader.getTabelDatabaseFromModel();
                     const attributes = resourceProcessor.readResourceFile(selectedText);
 
                     createUnitTest.generateUnitTest({ code: selectedText, atribut: attributes, type: "apiController", isLaravel: true });
