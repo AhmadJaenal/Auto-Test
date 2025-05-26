@@ -5,13 +5,12 @@ const WorkspaceChecker = require('../../../../utils/check-workspace');
 
 class ResourceProcessor {
     static getResourceNames(code) {
-        // Tangkap semua Resource class dari collection() atau response()->json([...])
         const resourcePattern = /\b([A-Za-z0-9_]+Resource)\b/g;
         const matches = [...code.matchAll(resourcePattern)];
 
         const names = matches.map(m => m[1]);
 
-        return [...new Set(names)]; // Hilangkan duplikat
+        return [...new Set(names)];
     }
 
     static getPath() {
@@ -33,7 +32,7 @@ class ResourceProcessor {
     }
 
     static getPathResource(code) {
-        const resourceNames = ResourceProcessor.getResourceNames(code); // Ambil semua resource name
+        const resourceNames = ResourceProcessor.getResourceNames(code);
         const fileContent = ResourceProcessor.readFileController();
 
         if (!resourceNames || resourceNames.length === 0) {
