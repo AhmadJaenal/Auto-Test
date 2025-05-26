@@ -27,11 +27,11 @@ class UnitTestManager {
                 const report = new ReportService();
                 const output = stdout + stderr;
 
-                if (output) {
-                    report.generateUnitTestReport(code, output);
-                }
+                // if (output) {
+                //     report.generateUnitTestReport(code, output);
+                // }
 
-                report.redirectToWeb(output);
+                // report.redirectToWeb(output);
 
                 outputChannel.appendLine(
                     error
@@ -57,7 +57,7 @@ class UnitTestManager {
             outputChannel.show();
             outputChannel.appendLine('Menjalan unit test dart...');
 
-            const command = `cd "${projectRoot}" && flutter test test/temporary_test.dart`;
+            const command = `cd "${projectRoot}" && flutter pub run build_runner build && flutter test test/temporary_test.dart`;
 
             exec(command, (error, stdout, stderr) => {
                 if (stdout) outputChannel.appendLine(stdout);
