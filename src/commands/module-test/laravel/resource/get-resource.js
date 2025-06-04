@@ -67,12 +67,13 @@ class ResourceProcessor {
         return null;
     }
 
+    static extractFunction(code) {
+        const match = code.match(/public function toArray\(\s*Request\s*\$request\)\s*:\s*array\s*\{\s*return\s*\[\s*([\s\S]*?)\s*\];\s*\}/);
+        if (!match) return null;
 
-    static extractAttributes(code) {
-        const match = code.match(/return\s*\[\s*([\s\S]*?)\s*\];/);
-        if (!match) return [];
-        return Array.from(match[1].matchAll(/['"]([^'"]+)['"]\s*=>/g), m => m[1]);
+        return match[0];
     }
+
 
     readResourceFile(code) {
         const resourcePaths = ResourceProcessor.getPathResource(code);
@@ -101,8 +102,8 @@ class ResourceProcessor {
                 try {
                     const content = fs.readFileSync(fullPath, 'utf8');
                     // vscode.window.showInformationMessage(`Isi file: ${fullPath}`);
-                    const attributes = ResourceProcessor.extractAttributes(content);
-                    vscode.window.showInformationMessage(`Atribut : ${attributes}`)
+                    const attributes = ResourceProcessor.extractFunction(content);
+                    // vscode.window.showInformationMessage(`Atribut : ${attributes}`)
                     return attributes;
                 } catch (err) {
                     vscode.window.showErrorMessage(`Gagal membaca file:\n${fullPath}\n\n${err.message}`);
