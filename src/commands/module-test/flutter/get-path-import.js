@@ -13,6 +13,7 @@ class PathImportDart {
       vscode.window.showWarningMessage('No active file is open.');
     }
   }
+
   readFileModel(modelName) {
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (workspaceFolders && workspaceFolders.length > 0) {
@@ -23,10 +24,10 @@ class PathImportDart {
       try {
         const code = fs.readFileSync(modelDir, 'utf8');
         // vscode.window.showInformationMessage(`Code file model: ${code}`);
-        return code; // Mengembalikan string
+        return code;
       } catch (err) {
         vscode.window.showErrorMessage(`Error reading file: ${err.message}`);
-        return null; // Atau Anda bisa mengembalikan string kosong
+        return null;
       }
     } else {
       vscode.window.showErrorMessage('No workspace folder found');
@@ -47,10 +48,9 @@ class PathImportDart {
       attributes.push(match[1]); // Menyimpan nama atribut
     }
 
-    // Menampilkan daftar atribut
     vscode.window.showInformationMessage(`Atribut yang ditemukan: ${attributes.join(', ')}`);
 
-    return attributes; // Mengembalikan daftar atribut
+    return attributes;
   }
 
 }
