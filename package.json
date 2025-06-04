@@ -21,18 +21,18 @@
         "auto-unit-test.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API KEY for Auto Unit Test"
+          "description": "API Key untuk koneksi dengan website pembuatan laporan"
         }
       }
     },
     "commands": [
       {
         "command": "auto-unit-test.testController",
-        "title": "CyberTest: Test Controller"
+        "title": "CyberTest: Test Function"
       },
       {
-        "command": "auto-unit-test.runTestLaravel",
-        "title": "CyberTest: Run Test Laravel"
+        "command": "auto-unit-test.runUnitTest",
+        "title": "CyberTest: Menjalankan Unit Test"
       },
       {
         "command": "auto-unit-test.testApiController",
@@ -40,7 +40,11 @@
       },
       {
         "command": "auto-unit-test.updateApiKey",
-        "title": "CyberTest: Update API Key"
+        "title": "CyberTest: Perbaharui Key"
+      },
+      {
+        "command": "auto-unit-test.deleteKey",
+        "title": "CyberTest: Hapus Key"
       }
     ]
   },

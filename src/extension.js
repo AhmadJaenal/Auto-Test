@@ -18,22 +18,24 @@ class Main {
     }
 
     registerCommands() {
-        this.apiKeyHandler.askForApiKey();
-
         this.register('auto-unit-test.updateApiKey', () => {
-            this.apiKeyHandler.updateApiKey();
+            this.apiKeyHandler.inputKey();
         });
 
         this.register('auto-unit-test.testController', async () => {
-            this.codeSelector.selectCode({ isApiController: false });
+            this.codeSelector.selectCode({ isApiController: false});
         });
 
         this.register('auto-unit-test.testApiController', async () => {
-            this.codeSelector.selectCode({ isApiController: true });
+            this.codeSelector.selectCode({ isApiController: true});
         });
 
-        this.register('auto-unit-test.runTestLaravel', () => {
-            this.unitTestManager.runUnitTestLaravel();
+        this.register('auto-unit-test.runUnitTest', () => {
+            this.unitTestManager.runUnitTest();
+        });
+
+        this.register('auto-unit-test.deleteKey', () => {
+            this.apiKeyHandler.deleteKey();
         });
     }
 
@@ -48,7 +50,7 @@ function activate(context) {
     handler.registerCommands();
 }
 
-function deactivate() {}
+function deactivate() { }
 
 module.exports = {
     activate,
