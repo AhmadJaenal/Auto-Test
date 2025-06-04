@@ -1,8 +1,23 @@
 const vscode = require('vscode');
 const { exec } = require('child_process');
 const ReportService = require('../../services/report-service');
+const ApiKeyHandler = require('../api/api-key-handler');
+const OutputChannelChecker = require('../../../utils/check-ouput');
+const WorkspaceChecker = require('../../../utils/check-workspace');
+
 class UnitTestManager {
-    runUnitTestLaravel(code) {
+    async runUnitTest() {
+        const apiKeyHandler = new ApiKeyHandler();
+        const outputChannelChecker = new OutputChannelChecker('CyberTest - Unit Test');
+        const workspaceChecker = new WorkspaceChecker();
+
+        const keyIsReady = await apiKeyHandler.checkKey();
+
+        if (keyIsReady === false) {
+            vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API KEY terlebih dahulu');
+            return;
+        }
+
         try {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
@@ -10,77 +25,49 @@ class UnitTestManager {
             }
 
             const projectRoot = workspaceFolders[0].uri.fsPath;
-            const outputChannel = vscode.window.createOutputChannel('Laravel Unit Test');
-            outputChannel.show();
-            outputChannel.appendLine('Menjalankan unit test dengan php artisan...');
+            outputChannelChecker.showOutputChannel();
 
-            const command = `cd "${projectRoot}" && php artisan test --filter=TemporaryTest`;
+            const framework = workspaceChecker.detectLanguageOrFramework;
+
+            let command;
+            switch (framework) {
+                case 'laravel':
+                    outputChannelChecker.appendLine('Menjalankan unit test dengan php artisan');
+                    command = `cd "${projectRoot}" && php artisan test --filter=TemporaryTest`;
+                    break;
+                case 'flutter':
+                    outputChannelChecker.appendLine('Menjalankan unit test dengan flutter run.');
+                    command = `cd "${projectRoot}" && flutter pub run build_runner build && flutter test test/temporary_test.dart`;
+                    break;
+                default:
+                    break;
+            }
 
             exec(command, (error, stdout = '', stderr = '') => {
                 if (stdout) {
-                    outputChannel.appendLine(stdout);
+                    outputChannelChecker.appendLine(stdout);
                 }
                 if (stderr) {
-                    outputChannel.appendLine(stderr);
+                    outputChannelChecker.appendLine(stderr);
                 }
 
                 const report = new ReportService();
                 const output = stdout + stderr;
 
                 // if (output) {
-                //     report.generateUnitTestReport(code, output);
+                //     report.generateUnitTestReport(output);
                 // }
 
                 // report.redirectToWeb(output);
 
-                outputChannel.appendLine(
-                    error
-                        ? `Eksekusi test gagal: ${error.message}`
-                        : 'Test berhasil dijalankan'
-                );
+                // outputChannel.appendLine(
+                //     error
+                //         ? `Eksekusi test gagal: ${error.message}`
+                //         : 'Test berhasil dijalankan'
+                // );
+
+                vscode.window.showInformationMessage('Proses unit test selesai');
             });
-
-        } catch (error) {
-            vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
-        }
-    }
-
-    runUnitTestDart(code) {
-        try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders) {
-                throw new Error('No workspace folder found');
-            }
-
-            const projectRoot = workspaceFolders[0].uri.fsPath;
-            const outputChannel = vscode.window.createOutputChannel('Flutter Unit Test');
-            outputChannel.show();
-            outputChannel.appendLine('Menjalan unit test dart...');
-
-            const command = `cd "${projectRoot}" && flutter pub run build_runner build && flutter test test/temporary_test.dart`;
-
-            exec(command, (error, stdout, stderr) => {
-                if (stdout) outputChannel.appendLine(stdout);
-                if (stderr) outputChannel.appendLine(stderr);
-
-                report.redirectToWeb(output);
-
-                const report = new ReportService();
-                const output = stdout + stderr;
-
-                if (output) {
-                    report.generateUnitTestReport(code, output);
-                }
-
-                report.redirectToWeb(output);
-
-                if (error) {
-                    outputChannel.appendLine(`Eksekusi test gagal: ${error.message}`);
-                } else {
-                    outputChannel.appendLine('Test telah selesai');
-                }
-            });
-
         } catch (error) {
             vscode.window.showErrorMessage(`Error dalam runUnitTest: ${error.message}`);
         }
