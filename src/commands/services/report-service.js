@@ -2,7 +2,7 @@ const vscode = require('vscode');
 const { OpenAI } = require('openai');
 
 class ReportService {
-    async generateUnitTestReport(code, resultUnitTest) {
+    async generateUnitTestReport( resultUnitTest) {
         const openai = new OpenAI({
             apiKey: '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'
         });
