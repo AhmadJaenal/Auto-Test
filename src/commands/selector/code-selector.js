@@ -1,10 +1,13 @@
 const vscode = require('vscode');
-const GenerateTestModule = require('../module-test/laravel/generate-test-case/generate-test-case');
-const MigrationProcessor = require('../module-test/laravel/generate-factory/core/migration-processor');
+const GenerateTestModule = require('../module-test/prompt/generate-test-case');
 const ResourceProcessor = require('../module-test/laravel/resource/get-resource');
+const RequestProcessor = require('../module-test/laravel/request/get-request');
 
 const WorkspaceChecker = require('../../utils/check-workspace');
 const PathImportDart = require('../module-test/flutter/get-path-import');
+const ApiKeyHandler = require('../module-test/api/api-key-handler');
+const MigrationProcessor = require('../module-test/laravel/migration/migration-processor');
+const OutputChannelChecker = require('../../utils/check-ouput');
 
 class CodeSelector {
     static isFunctionDart(code) {
@@ -51,14 +54,26 @@ class CodeSelector {
         while ((match = modelUsagePattern.exec(code)) !== null) {
             models.push(match[1]);
         }
-        
+
         return [...new Set(models)];
     }
 
     async selectCode({ isApiController = false }) {
-        const createUnitTest = new GenerateTestModule();
         const migrationProcessor = new MigrationProcessor();
+        const apiKeyHandler = new ApiKeyHandler();
+        const keyIsReady = await apiKeyHandler.checkKey();
+
+        if (keyIsReady === false) {
+            vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API KEY terlebih dahulu');
+            return;
+        }
+
+        const createUnitTest = new GenerateTestModule();
         const resourceProcessor = new ResourceProcessor();
+        const requestProcessor = new RequestProcessor();
+        const outputChannelChecker = new OutputChannelChecker('CyberTest - Unit Test');
+
+        const framework = CodeSelector.getExtNameWorkspace();
 
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -73,19 +88,21 @@ class CodeSelector {
         }
 
         const selectedText = editor.document.getText(selection);
-
         const isFunction = CodeSelector.isFunctionLaravel(selectedText);
 
-        const extName = CodeSelector.getExtNameWorkspace();
-        switch (extName) {
-            case 'PHP':
+        outputChannelChecker.showOutputChannel();
+
+        switch (framework) {
+            case 'laravel':
                 if (!isApiController) {
                     if (isFunction) {
                         const modelName = CodeSelector.getUsedModels(selectedText);
                         const modelMigrationPairs = await migrationProcessor.getFileNameMigration(modelName);
 
                         const atribut = await Promise.all(modelMigrationPairs.map(pair => migrationProcessor.readMigrationFiles(pair.file)));
-                        createUnitTest.generateUnitTest({ code: selectedText, isLaravel: true, modelName: modelName, attributeMigration: atribut });
+
+                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: 'laravel' });
+                        vscode.window.showInformationMessage(`Sedang membuat kode unit test!`);
                     }
 
                     if (!isFunction) {
@@ -95,34 +112,28 @@ class CodeSelector {
                 }
 
                 if (isApiController) {
-                    const attributes = resourceProcessor.readResourceFile(selectedText);
+                    const attributesResource = resourceProcessor.readResourceFile(selectedText);
+                    const attributesRequest = requestProcessor.readRequestFile(selectedText);
 
-                    createUnitTest.generateUnitTest({ code: selectedText, atribut: attributes, type: "apiController", isLaravel: true });
+                    createUnitTest.generateUnitTest({ code: selectedText, resource: attributesResource, request: attributesRequest, type: "api function", framework: framework });
                 }
                 break;
-            case 'Dart':
+            case 'flutter':
                 if (CodeSelector.isFunctionDart(selectedText)) {
                     const pathImport = new PathImportDart();
 
                     const modelName = CodeSelector.getModelInFunction(selectedText);
-
-                    // vscode.window.showInformationMessage(`Active file path: ${workspaceActivePath}`);
-
-                    // const contentFile = pathImport.readActiveWorkspace(workspaceActivePath);
-
                     try {
                         const code = pathImport.readFileModel(modelName);
                         const attributes = pathImport.getAtributModel(code);
-                        createUnitTest.generateUnitTest({ code: selectedText, attributes: attributes, type: "dart Controller", isDart: true });
-
-                        // vscode.window.(showInformationMessage`Atribut yang didapat ${attributes}`);
+                        createUnitTest.generateUnitTest({ code: selectedText, attributesModelDart: attributes, type: "dart function", framework: framework });
                     } catch (error) {
                         vscode.window.showErrorMessage(`terjadi kesalahan ${error}`);
                     }
                 }
                 break;
             default:
-                vscode.window.showErrorMessage('Fitur untuk bahasa atau framework ini belum tersedia');
+                vscode.window.showErrorMessage('Untuk bahasa pemrograman ini belum tersedia fitur unit test');
                 break;
         }
     }
