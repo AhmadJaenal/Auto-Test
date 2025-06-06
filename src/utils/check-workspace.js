@@ -15,9 +15,9 @@ class WorkspaceChecker {
 
             switch(fileExtension) {
                 case '.dart':
-                    return 'Dart';
+                    return 'fluter';
                 case '.php':
-                    return 'PHP';
+                    return 'laravel';
                 default:
                     return 'Bahasa pemrograman tidak terdeteksi';
             }

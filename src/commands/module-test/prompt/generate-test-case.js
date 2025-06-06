@@ -2,7 +2,6 @@ const { OpenAI } = require('openai');
 const vscode = require('vscode');
 const TemporaryFileModule = require('../temporary-file/create-temporary');
 const UnitTestManager = require('../auto-test/unit-test-manager');
-const WorkspaceChecker = require('../../../utils/check-workspace');
 class GenerateTestModule {
     constructor() {
         this.temporary = new TemporaryFileModule();
