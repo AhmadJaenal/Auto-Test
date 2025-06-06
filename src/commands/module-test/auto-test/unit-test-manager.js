@@ -6,7 +6,7 @@ const OutputChannelChecker = require('../../../utils/check-ouput');
 const WorkspaceChecker = require('../../../utils/check-workspace');
 
 class UnitTestManager {
-    async runUnitTest() {
+    async runUnitTest(code, framework) {
         const apiKeyHandler = new ApiKeyHandler();
         const outputChannelChecker = new OutputChannelChecker('CyberTest - Unit Test');
         const workspaceChecker = new WorkspaceChecker();
@@ -27,7 +27,6 @@ class UnitTestManager {
             const projectRoot = workspaceFolders[0].uri.fsPath;
             outputChannelChecker.showOutputChannel();
 
-            const framework = workspaceChecker.detectLanguageOrFramework;
 
             let command;
             switch (framework) {
@@ -54,17 +53,11 @@ class UnitTestManager {
                 const report = new ReportService();
                 const output = stdout + stderr;
 
-                // if (output) {
-                //     report.generateUnitTestReport(output);
-                // }
+                if (output) {
+                    report.generateUnitTestReport(code, output);
+                }
 
-                // report.redirectToWeb(output);
-
-                // outputChannel.appendLine(
-                //     error
-                //         ? `Eksekusi test gagal: ${error.message}`
-                //         : 'Test berhasil dijalankan'
-                // );
+                report.redirectToWeb(output);
 
                 vscode.window.showInformationMessage('Proses unit test selesai');
             });
