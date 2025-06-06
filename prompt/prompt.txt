@@ -1,0 +1,99 @@
+
+
+// public function test_login_user_already_logged_in_redirects_to_dashboard()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andReturn(true);
+
+//         Redirect::shouldReceive('to')
+//             ->with('dashboard')
+//             ->andReturn('redirect_dashboard');
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         $result = $controller->login();
+
+//         $this->assertEquals('redirect_dashboard', $result);
+//     }
+
+//     public function test_login_user_not_logged_in_returns_login_view()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andReturn(false);
+
+//         View::shouldReceive('make')
+//             ->with('dashboard.pages.auth.login')
+//             ->andReturn('login_view');
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         $result = $controller->login();
+
+//         $this->assertEquals('login_view', $result);
+//     }
+
+//     public function test_login_without_parameters_works_well()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andReturn(false);
+
+//         View::shouldReceive('make')
+//             ->with('dashboard.pages.auth.login')
+//             ->andReturn('login_view');
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         // Tidak ada parameter dikirim ke login()
+//         $result = $controller->login();
+
+//         $this->assertEquals('login_view', $result);
+//     }
+
+//     public function test_login_auth_check_throws_exception()
+//     {
+//         Auth::shouldReceive('check')
+//             ->once()
+//             ->andThrow(new Exception('Auth Check Failed'));
+
+//         $controller = new class {
+//             public function login() {
+//                 if (Auth::check()) {
+//                     return Redirect::to('dashboard');
+//                 } else {
+//                     return View::make('dashboard.pages.auth.login');
+//                 }
+//             }
+//         };
+
+//         $this->expectException(Exception::class);
+//         $this->expectExceptionMessage('Auth Check Failed');
+
+//         $controller->login();
+//     }

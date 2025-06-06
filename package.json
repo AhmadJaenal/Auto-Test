@@ -12,16 +12,39 @@
   "activationEvents": [
     "onLanguage:php"
   ],
-  "main": "./extension.js",
+  "main": "src/extension.js",
   "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Auto Unit Test",
+      "properties": {
+        "auto-unit-test.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API Key untuk koneksi dengan website pembuatan laporan"
+        }
+      }
+    },
     "commands": [
       {
-        "command": "auto-unit-test.showMyTask",
-        "title": "Show My Task"
+        "command": "auto-unit-test.testController",
+        "title": "CyberTest: Test Function"
       },
       {
-        "command": "auto-unit-test.testController",
-        "title": "Test Controller"
+        "command": "auto-unit-test.runUnitTest",
+        "title": "CyberTest: Menjalankan Unit Test"
+      },
+      {
+        "command": "auto-unit-test.testApiController",
+        "title": "CyberTest: Test API Controller"
+      },
+      {
+        "command": "auto-unit-test.updateApiKey",
+        "title": "CyberTest: Perbaharui Key"
+      },
+      {
+        "command": "auto-unit-test.deleteKey",
+        "title": "CyberTest: Hapus Key"
       }
     ]
   },
@@ -39,6 +62,8 @@
     "eslint": "^9.13.0"
   },
   "dependencies": {
-    "auto-unit-test": "file:"
+    "auto-unit-test": "file:",
+    "axios": "^1.7.9",
+    "dotenv": "^16.4.7"
   }
 }
