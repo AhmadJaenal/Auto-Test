@@ -101,7 +101,7 @@ class CodeSelector {
 
                         const atribut = await Promise.all(modelMigrationPairs.map(pair => migrationProcessor.readMigrationFiles(pair.file)));
 
-                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: 'laravel' });
+                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: framework });
                         vscode.window.showInformationMessage(`Sedang membuat kode unit test!`);
                     }
 
