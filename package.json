@@ -35,16 +35,16 @@
         "title": "CyberTest: Menjalankan Unit Test"
       },
       {
-        "command": "auto-unit-test.testApiController",
-        "title": "CyberTest: Test API Controller"
-      },
-      {
         "command": "auto-unit-test.updateApiKey",
         "title": "CyberTest: Perbaharui Key"
       },
       {
         "command": "auto-unit-test.deleteKey",
         "title": "CyberTest: Hapus Key"
+      },
+      {
+        "command": "auto-unit-test.inputKeyOpenAI",
+        "title": "CyberTest: Key OpenAI"
       }
     ]
   },
