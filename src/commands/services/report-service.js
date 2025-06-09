@@ -1,10 +1,18 @@
 const vscode = require('vscode');
 const { OpenAI } = require('openai');
+const ApiKeyHandler = require('../module-test/api/api-key-handler');
 
 class ReportService {
-    async generateUnitTestReport(code, resultUnitTest) {
+    async generateUnitTestReport(code, resultUnitTest, context) {
+        const apiKeyHandler = new ApiKeyHandler();
+        const apiKey = await apiKeyHandler.getOpenAIKey(context);
+        if (!apiKey) {
+            vscode.window.showInformationMessage('API Key OpenAI belum dipasang. Silakan pasang API Key terlebih dahulu.');
+            return;
+        }
+
         const openai = new OpenAI({
-            apiKey: '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'
+            apiKey: apiKey
         });
 
         const prompt = `
@@ -16,31 +24,26 @@ class ReportService {
         Kode tersebut telah melalui proses pengujian, dan berikut adalah hasil dari unit test yang dijalankan:
         ${resultUnitTest}
 
-        Tugas Anda adalah:
-
+        Tugas:
         1. Menganalisis kode program berdasarkan best practice pemrograman dan keterbacaan.
-        2. Menganalisis hasil unit test: apakah pengujian mencakup kasus yang tepat, dan apakah hasilnya sesuai harapan.
-        3. Mengidentifikasi kelemahan pada kode program dan/atau hasil pengujiannya.
-        4. Memberikan rekomendasi perbaikan yang konkret dan teknis, baik pada sisi kode maupun pengujian.
+        2. Menganalisis kesalahan logika atau potensi bug dalam kode tersebut.
+        3. Menganalisis hasil unit test: apakah pengujian mencakup kasus yang tepat, dan apakah hasilnya sesuai harapan.
+        4. Mengidentifikasi kelemahan pada kode program dan/atau hasil pengujiannya.
+        6. Memberikan rekomendasi perbaikan yang konkret dan teknis, baik pada sisi kode maupun pengujian.
 
         Format laporan yang harus Anda gunakan:
-
-        1. Ringkasan Eksekutif
-        Berikan ringkasan singkat mengenai status kode dan pengujian.
-
-        2. Analisis Kode
-        Jelaskan kualitas kode, potensi bug, readability, dan kemungkinan improvement.
-
-        3. Analisis Hasil Unit Test
-        Tinjau cakupan test, validitas, serta hasil yang dicapai.
-
-        4. Rekomendasi Perbaikan
-        Berikan saran teknis yang jelas, disertai justifikasi. Bila perlu, sertakan contoh perbaikan kode.
-
-        5. Kesimpulan
-        Simpulkan apakah kode tersebut dapat dianggap stabil/siap digunakan atau memerlukan revisi lebih lanjut.
+        1. Berikan ringkasan singkat mengenai status kode dan pengujian.
+        2. Jelaskan kualitas kode, potensi bug, readability, dan kemungkinan improvement.
+        3. Analisis hasil unit test, validitas, serta hasil yang dicapai.
+        4. Berikan saran teknis yang jelas, disertai justifikasi. Bila perlu, sertakan contoh perbaikan kode.
+        5. Simpulkan apakah kode tersebut dapat dianggap stabil/siap digunakan atau memerlukan revisi lebih lanjut.
 
         Gunakan gaya bahasa profesional dan langsung pada poin, dengan fokus pada kualitas dan kejelasan analisis.
+
+
+        ATURAN & FORMAT:
+        1. Berikan jawaban tanpa tambahan katakter *-# dan lainya
+        2. Tulisan menggunakan ukuran font yang sama
         `;
         const response = await openai.chat.completions.create({
             model: 'gpt-4.1',
@@ -227,8 +230,15 @@ class ReportService {
             </ul>
         `;
 
+        const apiKeyHandler = new ApiKeyHandler();
+        const key = await apiKeyHandler.getKeyWeb();
+        if (!key) {
+            vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API key terlebih dahulu');
+            return;
+        }
+
         const data = {
-            apiKey: 'e2714f8565f136bef2e499f68df3b434f785a4c5fc6f25b07168968b69ce3f14',
+            apiKey: key,
             report: report
         };
 

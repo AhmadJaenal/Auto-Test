@@ -1,15 +1,21 @@
 const { OpenAI } = require('openai');
 const vscode = require('vscode');
-const TemporaryFileModule = require('../temporary-file/create-temporary');
-const UnitTestManager = require('../auto-test/unit-test-manager');
+const TemporaryFile = require('../temporary-file/create-temporary');
+const ApiKeyHandler = require('../api/api-key-handler');
+
 class GenerateTestModule {
-    constructor() {
-        this.temporary = new TemporaryFileModule();
-        this.unitTest = new UnitTestManager();
-    }
-    async generateUnitTest({ code, type = "controller", resource = null, request = null, attributeMigration = null, modelName = null, attributesModelDart = null, framework = null }) {
+    async generateUnitTest({ code, type = "controller", resource = null, request = null, attributeMigration = null, modelName = null, attributesModelDart = null, framework = null, context }) {
+        const apiKeyHandler = new ApiKeyHandler();
+        const temporary = new TemporaryFile();
+
+        const apiKey = await apiKeyHandler.getOpenAIKey(context);
+        if (!apiKey) {
+            vscode.window.showErrorMessage('API Key OpenAI belum dipasang. Silakan pasang API Key terlebih dahulu.');
+            return;
+        }
+
         const openai = new OpenAI({
-            apiKey: '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',
+            apiKey: apiKey,
         });
 
         let prompt = '';
@@ -18,8 +24,7 @@ class GenerateTestModule {
             case 'laravel':
                 switch (type) {
                     case 'function':
-
-                        prompt = `
+                        prompt = ` 
 Anda adalah seorang SOFTWARE TESTER profesional.
 Tugas Anda adalah membuat kode unit test sederhana menggunakan Mockery, agar dapat dimengerti dan dijalankan oleh programmer pemula.
 
@@ -28,19 +33,21 @@ Buat kode unit test terhadap potongan kode function controller di bawah ini.
 ${code}
 
 ${attributeMigration ? `Pada model ${modelName} terdapat beberapa atribut yaitu ${attributeMigration}` : ''}
-                            
+
 ATURAN & FORMAT:
 1. Nama class test harus: TemporaryTest
 2. Semua test menggunakan Mockery
 3. Seluruh pengujian dibuat dalam bentuk fungsi-fungsi public function test_*()
 4. Jangan menyertakan komentar atau penjelasan — hanya kode PHP test lengkap
 5. Tidak perlu output tambahan apapun selain kode
+6. Tidak boleh memperbaiki atau menambahkan kode lain pada kode yang akan diuji dalam proses mocking, tujuannya agar mengetahui kekurangan
+7. Buat kode unit test sesuai tujuan dari kode yang akan di uji
 
 CAKUPAN TEST WAJIB (minimal 4 test jika memungkinkan):
-1. Test berhasil
-2. Test gagal
+1. Test berhasil menambahkan data pada database
+2. Test gagal menyimpan data (misalnya karena save() tidak dipanggil atau return false)
 3. Test validasi error atau exception
-4. Test tanpa parameter
+4. Test pemanggilan fungsi tanpa parameter
 
 KETENTUAN TAMBAHAN
 1. Gunakan teknik mocking penuh (Mockery) untuk semua dependency eksternal (seperti Auth, View, Redirect, Request, dll)
@@ -283,7 +290,6 @@ public function test_add_menu_success()
     $mockRedirectResponse->shouldReceive('with')
         ->with('success', 'Menu uploaded successfully.')
         ->andReturn('redirect_success');
-
 
 CATATAN TAMBAHAN
 Jika kode program yang di tes menggunakan library tambahan, maka buatkan helpernya. 
@@ -902,18 +908,22 @@ void main() {
                 break;
         }
 
-        const response = await openai.chat.completions.create({
-            model: 'gpt-4.1',
-            messages: [
-                { role: 'user', content: prompt }
-            ],
-            temperature: 0.3
-        });
+        try {
+            const response = await openai.chat.completions.create({
+                model: 'gpt-4.1',
+                messages: [
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.3
+            });
 
-        const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
+            const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
 
-        vscode.window.showInformationMessage('Sedang membuat file unit test!');
-        this.temporary.createTemporaryFile({ selectedText: code, unitTestCode: cleanResponse, framework: framework });
+            vscode.window.showInformationMessage('Sedang membuat file unit test!');
+            temporary.createTemporaryFile({ selectedText: code, unitTestCode: cleanResponse, framework: framework, context:context});
+        } catch (error) {
+            vscode.window.showErrorMessage(`Terjadi error ${error.message}`);
+        }
     }
 
     static cleanApiResponse(response) {
