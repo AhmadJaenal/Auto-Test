@@ -58,10 +58,10 @@ class CodeSelector {
         return [...new Set(models)];
     }
 
-    async selectCode({ isApiController = false }) {
+    async selectCode({ isApiController = false, context}) {
         const migrationProcessor = new MigrationProcessor();
         const apiKeyHandler = new ApiKeyHandler();
-        const keyIsReady = await apiKeyHandler.checkKey();
+        const keyIsReady = await apiKeyHandler.getKeyWeb();
 
         if (keyIsReady === false) {
             vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API KEY terlebih dahulu');
@@ -91,6 +91,7 @@ class CodeSelector {
         const isFunction = CodeSelector.isFunctionLaravel(selectedText);
 
         outputChannelChecker.showOutputChannel();
+        vscode.window.showInformationMessage(`Framework yang digunakan: ${framework}`);
 
         switch (framework) {
             case 'laravel':
@@ -101,7 +102,7 @@ class CodeSelector {
 
                         const atribut = await Promise.all(modelMigrationPairs.map(pair => migrationProcessor.readMigrationFiles(pair.file)));
 
-                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: framework });
+                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: framework, context: context });
                         vscode.window.showInformationMessage(`Sedang membuat kode unit test!`);
                     }
 
@@ -115,7 +116,7 @@ class CodeSelector {
                     const attributesResource = resourceProcessor.readResourceFile(selectedText);
                     const attributesRequest = requestProcessor.readRequestFile(selectedText);
 
-                    createUnitTest.generateUnitTest({ code: selectedText, resource: attributesResource, request: attributesRequest, type: "api function", framework: framework });
+                    createUnitTest.generateUnitTest({ code: selectedText, resource: attributesResource, request: attributesRequest, type: "api function", framework: framework, context: context });
                 }
                 break;
             case 'flutter':

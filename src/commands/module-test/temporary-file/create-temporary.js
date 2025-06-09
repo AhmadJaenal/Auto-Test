@@ -6,14 +6,11 @@ const UnitTestManager = require('../auto-test/unit-test-manager');
 const OutputChannelChecker = require('../../../utils/check-ouput');
 
 class TemporaryFile {
-    constructor() {
-        this.unitTestManager = new UnitTestManager();
-    }
-
-    createTemporaryFile({ unitTestCode = null, selectedText = null, framework = null }) {
+    createTemporaryFile({ unitTestCode = null, selectedText = null, framework = null, context}) {
         const workspaceChecker = new WorkspaceChecker();
-        const outputChannelChecker = new OutputChannelChecker('CyberTest - Temporary File');
+        const unitTestManager = new UnitTestManager();
 
+        const outputChannelChecker = new OutputChannelChecker('CyberTest - Temporary File');
 
         if (workspaceChecker.checkWorkspace()) {
             const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -47,7 +44,7 @@ class TemporaryFile {
                     vscode.window.showInformationMessage('Terjadi kesalahan saat membuat file test');
                 } else {
                     vscode.window.showInformationMessage('File Test berhasil dibuat');
-                    this.unitTestManager.runUnitTest(selectedText, framework);
+                    unitTestManager.runUnitTest(selectedText, context, framework);
                 }
             });
         }

@@ -3,31 +3,28 @@ const { exec } = require('child_process');
 const ReportService = require('../../services/report-service');
 const ApiKeyHandler = require('../api/api-key-handler');
 const OutputChannelChecker = require('../../../utils/check-ouput');
-const WorkspaceChecker = require('../../../utils/check-workspace');
 
 class UnitTestManager {
-    async runUnitTest(code, framework) {
+    async runUnitTest(code, context, framework) {
         const apiKeyHandler = new ApiKeyHandler();
         const outputChannelChecker = new OutputChannelChecker('CyberTest - Unit Test');
-        const workspaceChecker = new WorkspaceChecker();
 
-        const keyIsReady = await apiKeyHandler.checkKey();
+        const keyIsReady = await apiKeyHandler.getKeyWeb();
 
         if (keyIsReady === false) {
             vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API KEY terlebih dahulu');
             return;
         }
 
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            throw new Error('No workspace folder found');
+        }
+
+        const projectRoot = workspaceFolders[0].uri.fsPath;
+        outputChannelChecker.showOutputChannel();
+
         try {
-            const workspaceFolders = vscode.workspace.workspaceFolders;
-            if (!workspaceFolders) {
-                throw new Error('No workspace folder found');
-            }
-
-            const projectRoot = workspaceFolders[0].uri.fsPath;
-            outputChannelChecker.showOutputChannel();
-
-
             let command;
             switch (framework) {
                 case 'laravel':
@@ -53,11 +50,12 @@ class UnitTestManager {
                 const report = new ReportService();
                 const output = stdout + stderr;
 
-                if (output) {
-                    report.generateUnitTestReport(code, output);
-                }
+                // if (output) {
+                //     report.generateUnitTestReport(code, output, context);
+                //     vscode.window.showInformationMessage('Membuat laporan unit test...');
+                // }
 
-                report.redirectToWeb(output);
+                // report.redirectToWeb(output);
 
                 vscode.window.showInformationMessage('Proses unit test selesai');
             });
