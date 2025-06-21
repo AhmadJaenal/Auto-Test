@@ -23,17 +23,20 @@ class UnitTestManager {
 
         const projectRoot = workspaceFolders[0].uri.fsPath;
         outputChannelChecker.showOutputChannel();
+        vscode.window.showInformationMessage(`path yang akan di test ${projectRoot}`);
 
         try {
+            const driveLetter = projectRoot.slice(0, 2);
             let command;
+
             switch (framework) {
                 case 'laravel':
                     outputChannelChecker.appendLine('Menjalankan unit test dengan php artisan');
-                    command = `cd "${projectRoot}" && php artisan test --filter=TemporaryTest`;
+                    command = `${driveLetter} && cd "${projectRoot}" && php artisan test --filter=TemporaryTest`;
                     break;
                 case 'flutter':
                     outputChannelChecker.appendLine('Menjalankan unit test dengan flutter run.');
-                    command = `cd "${projectRoot}" && flutter pub run build_runner build && flutter test test/temporary_test.dart`;
+                    command = `${driveLetter} && cd "${projectRoot}" && flutter pub run build_runner build && flutter test test/temporary_test.dart`;
                     break;
                 default:
                     break;
@@ -55,7 +58,7 @@ class UnitTestManager {
                 //     vscode.window.showInformationMessage('Membuat laporan unit test...');
                 // }
 
-                // report.redirectToWeb(output);
+                // report.redirectToWeb(code, output);
 
                 vscode.window.showInformationMessage('Proses unit test selesai');
             });
