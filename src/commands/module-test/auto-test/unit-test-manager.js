@@ -23,7 +23,6 @@ class UnitTestManager {
 
         const projectRoot = workspaceFolders[0].uri.fsPath;
         outputChannelChecker.showOutputChannel();
-        vscode.window.showInformationMessage(`path yang akan di test ${projectRoot}`);
 
         try {
             const driveLetter = projectRoot.slice(0, 2);

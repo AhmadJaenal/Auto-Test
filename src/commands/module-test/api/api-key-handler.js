@@ -9,7 +9,7 @@ class ApiKeyHandler {
         if (key) {
             this.checkInputKey(key);
         } else {
-            vscode.window.showErrorMessage('API KEY wajib ada');
+            vscode.window.showErrorMessage('Tidak ada key yang dimasukan');
         }
     }
 
