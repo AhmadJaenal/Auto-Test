@@ -44,7 +44,7 @@ class TemporaryFile {
                     vscode.window.showInformationMessage('Terjadi kesalahan saat membuat file test');
                 } else {
                     vscode.window.showInformationMessage('File Test berhasil dibuat');
-                    unitTestManager.runUnitTest(selectedText, context, framework);
+                    unitTestManager.runUnitTest(selectedText, context, framework, unitTestCode);
                 }
             });
         }
