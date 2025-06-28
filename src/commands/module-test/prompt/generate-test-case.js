@@ -4,7 +4,7 @@ const TemporaryFile = require('../temporary-file/create-temporary');
 const ApiKeyHandler = require('../api/api-key-handler');
 
 class GenerateTestModule {
-    async generateUnitTest({ code, type = "controller", resource = null, request = null, attributeMigration = null, modelName = null, attributesModelDart = null, framework = null, context }) {
+    async generateUnitTest({ code, type = "function", resource = null, request = null, attributeMigration = null, modelName = null, attributesModelDart = null, framework = null, context, views = null }) {
         const apiKeyHandler = new ApiKeyHandler();
         const temporary = new TemporaryFile();
 
@@ -26,13 +26,76 @@ class GenerateTestModule {
                     case 'function':
                         prompt = ` 
 Anda adalah seorang SOFTWARE TESTER profesional.
-Tugas Anda adalah membuat kode unit test sederhana menggunakan Mockery, agar dapat dimengerti dan dijalankan oleh programmer pemula.
+Tugas Anda adalah membuat skenario uji dengan mencari kelemahan atau potensi bug(error) dari kode yang di uji kemudian membuatkan kode unit test-nya menggunakan Mockery, agar dapat dimengerti dan dijalankan oleh programmer pemula.
 
 Tujuan 
 Buat kode unit test terhadap potongan kode function controller di bawah ini.
-${code}
+Kode yang harus diuji: ${code}
 
-${attributeMigration ? `Pada model ${modelName} terdapat beberapa atribut yaitu ${attributeMigration}` : ''}
+PENTING: 
+- Pada model ${modelName} terdapat beberapa atribut migration yaitu ${attributeMigration}. 
+
+Daftar path view yang TERDAFTAR di sistem
+- Views yang ada pada proyek ini yaitu ${views}
+
+Ketika kode controller memanggil fungsi view('some.path'), maka:
+
+- Jika path TERDAFTAR dalam dalam sistem:
+Tulis mock sebagai:
+View::shouldReceive('make')
+    ->once()
+    ->with('path', [...], []) // Isi dengan path yang terdaftar
+    ->andReturn('test_view');
+
+$this->assertEquals('test_view', $response);
+
+- Jika view TIDAK TERDAFTAR dalam sistem, maka:
+Contoh untuk view tidak valid:
+View::shouldReceive('make')
+    ->once()
+    ->with('NAMA_VIEW_YANG_SALAH', [], []) // Berbeda dari controller
+    ->andReturn('test_view');
+
+$this->assertEquals('test_view', $response); 
+
+ATURAN MOCK:
+1. **Mock expectation (shouldReceive)**: Gunakan HANYA atribut dari migration: ${attributeMigration}
+2. **Mock controller class**: Salin persis kode asli tanpa perubahan apapun, termasuk typo dan kesalahan
+
+Contoh Mock expectation yang BENAR:
+$foodMock->shouldReceive('create')
+->withArgs(function ($input) {  
+    return $input['url_img'] === 'storage/image/123456.jpg' // Gunakan atribut migration (url_img), bukan dari kode (url_imf)
+        && $input['food'] === $mockRequest->food
+        && isset($input['created_at']);
+})
+
+Contoh Mock dengan mengembalikan halaman yang benar
+public function test_login_return_view()
+{
+    View::shouldReceive('make')
+        ->once()
+        ->with('auth.login', [], []) 
+        // Jika nama view pada controller TIDAK terdaftar di sistem,
+        // maka parameter di .with() HARUS dibuat berbeda dengan yang ada pada controller
+        // agar unit test gagal (mengindikasikan view salah).
+        // Sebaliknya, jika nama view pada controller TERDAFTAR di sistem,
+        // maka parameter di .with() HARUS SAMA PERSIS agar unit test berhasil.
+        ->andReturn('test_view');
+
+    // Mock Controller: salin PERSIS kode asli yang diuji, TIDAK boleh diperbaiki walau ada typo/kesalahan
+    $controller = new class {
+        public function about()
+        {
+            return view("landingPage.pages.about");
+        }
+    };
+
+    $response = $controller->login();
+
+    // Assertion: pastikan hasil sama 'test_view' (dari mock View::make)
+    $this->assertEquals('test_view', $response);
+}
 
 ATURAN & FORMAT:
 1. Nama class test harus: TemporaryTest
@@ -40,8 +103,7 @@ ATURAN & FORMAT:
 3. Seluruh pengujian dibuat dalam bentuk fungsi-fungsi public function test_*()
 4. Jangan menyertakan komentar atau penjelasan — hanya kode PHP test lengkap
 5. Tidak perlu output tambahan apapun selain kode
-6. Tidak boleh memperbaiki atau menambahkan kode lain pada kode yang akan diuji dalam proses mocking, tujuannya agar mengetahui kekurangan
-7. Buat kode unit test sesuai tujuan dari kode yang akan di uji
+6. Pada saat membuat Mock kode yang akan di uji tidak boleh terdapat perubahan, harus sesuai dengan kode yang diterima 
 
 CAKUPAN TEST WAJIB (minimal 4 test jika memungkinkan):
 1. Test berhasil menambahkan data pada database
@@ -79,25 +141,7 @@ class TemporaryTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_login_user_already_logged_in_redirects_to_dashboard()
-    {
-      // Tempat kode test
-    }
-
-    public function test_login_user_not_logged_in_returns_login_view()
-    {
-        // Tempat kode test
-    }
-
-    public function test_login_without_parameters_works_well()
-    {
-        // Tempat kode test
-    }
-
-    public function test_add_menu_success()
-    {
-        // Tempat kode test
-    }
+    // Kode uji
 }
 
 4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
@@ -107,48 +151,67 @@ public function test_login_return_view()
 {
     View::shouldReceive('make')
         ->once()
-        ->with('auth.login')
+        ->with('auth.login', [], []) 
         ->andReturn('test_view');
 
-    $controller = new class extends AuthController {
-        public function login()
+    $controller = new class {
+        public function about()
         {
-            return View::make('auth.login');
+            return view("landingPage.pages.about");
         }
     };
 
     $response = $controller->login();
-
     $this->assertEquals('test_view', $response);
+}
+
+// Test return view dengan alamat yang salah
+public function test_about_return_view_fail_wrong_view_name()
+{
+    View::shouldReceive('make')
+        ->once()
+        ->with('landingPage.pages.abaut', [], [])
+        ->andReturn('wrong_view');
+
+    $controller = new class {
+        public function about()
+        {
+            return view("landingPage.pages.about");
+        }
+    };
+
+    $result = $controller->about();
+
+    $this->assertEquals('wrong_view', $result);
 }
 
 // Test: User sudah login, redirect ke dashboard (berhasil login)
 public function test_login_user_already_logged_in_redirects_to_dashboard()
-    {
-        // Mock Auth::check() return true
-        Auth::shouldReceive('check')
-            ->once()
-            ->andReturn(true);
+{
+    // Mock Auth::check() return true
+    Auth::shouldReceive('check')
+        ->once()
+        ->andReturn(true);
 
-        // Mock Redirect::to('dashboard')
-        Redirect::shouldReceive('to')
-            ->with('dashboard')
-            ->andReturn('redirect_dashboard');
+    // Mock Redirect::to('dashboard')
+    Redirect::shouldReceive('to')
+        ->with('dashboard')
+        ->andReturn('redirect_dashboard');
 
-        $controller = new class {
-            public function login() {
-                if (Auth::check()) {
-                    return Redirect::to('dashboard');
-                } else {
-                    return View::make('dashboard.pages.auth.login');
-                }
+    $controller = new class {
+        public function login() {
+            if (Auth::check()) {
+                return Redirect::to('dashboard');
+            } else {
+                return View::make('dashboard.pages.auth.login');
             }
-        };
+        }
+    };
 
-        $result = $controller->login();
+    $result = $controller->login();
 
-        $this->assertEquals('redirect_dashboard', $result);
-    }
+    $this->assertEquals('redirect_dashboard', $result);
+}
 
 // Test: User belum login, return view login (gagal login)
 public function test_login_user_not_logged_in_returns_login_view()
@@ -208,30 +271,52 @@ public function test_login_without_parameters_works_well()
 // Test: Untuk pengujian yang menggunakan database, gunakan Mockery untuk memmock Eloquent Model
 public function test_add_menu_success()
 {
-    // Fake data request (pakai stdClass, bukan facade Request)
-    $mockRequest = new \stdClass();
-    $mockRequest->image = new class {
-        public function extension()
+    // Buat mock request dengan method validate bawaan
+    // Atribut mock request harus mengikuti atribut yang terdapat pada validate dalam kode yang di uji, jika atribut tidak harus menyebabkan error
+    $mockRequest = new class {
+        public $image;
+        public $food;
+        public $desc;
+
+        public function __construct()
         {
-            return 'jpg';
+            $this->image = new class {
+                public function extension()
+                {
+                    return 'jpg';
+                }
+                public function storeAs($folder, $name, $driver)
+                {
+                    return 'image/123456789.jpg';
+                }
+            };
+            $this->food = 'Ayam Bakar';
+            $this->desc = 'Lezat dan gurih';
         }
-        public function storeAs($folder, $name, $driver)
+
+        public function validate($rules)
         {
-            return 'image/123456789.jpg';
+            // Simulasi validasi berhasil
+            return [
+                'image' => $this->image,
+                'food' => $this->food,
+                'desc' => $this->desc,
+            ];
         }
     };
-    $mockRequest->food_name = 'Nasi Goreng';
-    $mockRequest->desc = 'Enak sekali';
 
-    // Eloquent Model create DI-mock
+    // Mock Eloquent Model
     $foodMock = Mockery::mock();
-    $foodMock->shouldReceive('create')->once()->withArgs(function ($input) {
-        return $input['url_img'] === 'storage/image/123456789.jpg'
-            && $input['food_name'] === 'Nasi Goreng'
-            && $input['desc'] === 'Enak sekali'
-            && $input['created_at'] instanceof Carbon
-            && $input['updated_at'] instanceof Carbon;
-    })->andReturnTrue();
+    $foodMock->shouldReceive('create')
+        ->once()
+        ->withArgs(function ($input) use ($mockRequest) {
+            return $input['url_img'] === 'storage/image/123456789.jpg'
+                && $input['food_name'] === $mockRequest->food
+                && $input['desc'] === $mockRequest->desc
+                && isset($input['created_at'])
+                && isset($input['updated_at']);
+        })
+        ->andReturnTrue();
 
     // Mock Redirect
     $mockRedirectResponse = Mockery::mock();
@@ -241,6 +326,7 @@ public function test_add_menu_success()
 
     Redirect::shouldReceive('back')->once()->andReturn($mockRedirectResponse);
 
+    // Controller anon class
     $controller = new class($foodMock) {
         protected $food;
         public function __construct($food)
@@ -250,25 +336,38 @@ public function test_add_menu_success()
 
         public function addMenu($request)
         {
-            $imageName = time() . '.' . $request->image->extension();
-            $path = $request->image->storeAs('image', $imageName, 'public');
-
-            $this->food->create([
-                'url_img' => "storage/{$path}",
-                'food_name' => $request->food_name,
-                'desc' => $request->desc,
-                'created_at' => now(),
-                'updated_at' => now()
+            $request->validate([
+                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                'food' => 'required|string|max:255',
+                'desc' => 'required|string',
             ]);
 
-            return Redirect::back()->with('success', 'Menu uploaded successfully.');
+            $imageName = time() . '.' . $request->image->extension();
+            $path = $request->image->storeAs('image', $imageName, 'public');
+            $imageUrl = "storage/" . $path;
+
+            try {
+                $this->food->create([
+                    'url_img' => $imageUrl,
+                    'food_name' => $request->food, // Atribut $request->food seharusnya mengikuti atribut yang ada pada validate, jadi jika terdapat perbedaan unit test harus error
+                    'desc' => $request->desc,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return Redirect::back()->with('success', 'Menu uploaded successfully.');
+            } catch (\Throwable $th) {
+                return Redirect::back()->with('failed', 'Failed to upload Menu.');
+            }
         }
     };
 
+    // Jalankan test
     $result = $controller->addMenu($mockRequest);
 
     $this->assertEquals('redirect_success', $result);
 }
+
 
 5. Gunakan use Tests\\TestCase dan import TestCase pada bagian atas kode test.
 6. Perhatikan penggunaan tanda ::, sebaiknya mengikuti contoh berikut:
@@ -720,30 +819,253 @@ public function test_show_classroom_without_id()
     ], $responseData);
 }
 
+public function test_get_classrooms_success()
+{
+    // Mock data hasil dari ClassRoom::all()
+    $mockClassrooms = collect([
+        (object)['id' => 1, 'name' => 'Kelas A'],
+        (object)['id' => 2, 'name' => 'Kelas B'],
+    ]);
+
+    // Mock ClassRoom model dan method all()
+    $classRoomModelMock = Mockery::mock();
+    $classRoomModelMock->shouldReceive('all')->once()->andReturn($mockClassrooms);
+
+    // Mock ClassRoomResource::collection()
+    $mockResourceCollection = ['formatted_classroom_data'];
+    $classRoomResourceMock = Mockery::mock('alias:' . \App\Http\Resources\ClassRoomResource::class);
+    $classRoomResourceMock->shouldReceive('collection')
+        ->once()
+        ->with($mockClassrooms)
+        ->andReturn($mockResourceCollection);
+
+    // Controller dengan dependency injection ClassRoom model
+    $controller = new class($classRoomModelMock) {
+        protected $classRoom;
+
+        public function __construct($classRoom)
+        {
+            $this->classRoom = $classRoom;
+        }
+
+        public function get(Request $request)
+        {
+            $classRooms = $this->classRoom->all();
+
+            return response()->json([
+                'data' => \App\Http\Resources\ClassRoomResource::collection($classRooms)
+            ], 200);
+        }
+    };
+
+    // Jalankan controller
+    $mockRequest = Mockery::mock(Request::class);
+    $response = $controller->get($mockRequest);
+
+    // Assert response
+    $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $response);
+    $this->assertEquals(200, $response->getStatusCode());
+
+    $responseData = $response->getData(true);
+    $this->assertEquals(['formatted_classroom_data'], $responseData['data']);
+}
+
+public function test_show_classroom_success()
+{
+    $mockId = 1;
+
+    // Mock data classroom yang seharusnya dikembalikan (biasanya Eloquent Model)
+    $mockClassroom = (object)[
+        'id' => $mockId,
+        'name' => 'Kelas A',
+    ];
+
+    // Mock query builder untuk ClassRoom::where() -> first()
+    $queryBuilderMock = Mockery::mock();
+    $queryBuilderMock->shouldReceive('first')->once()->andReturn($mockClassroom);
+
+    // Mock model ClassRoom (bukan alias, supaya bisa dependency inject)
+    $classRoomModelMock = Mockery::mock();
+    $classRoomModelMock->shouldReceive('where')->once()->with('id', $mockId)->andReturn($queryBuilderMock);
+
+    // Mock resource (alias) agar static call intercepted
+    $mockResourceResult = ['id' => 1, 'name' => 'Kelas A'];
+    $classRoomResourceMock = Mockery::mock('alias:' . \App\Http\Resources\ClassRoomResource::class);
+    $classRoomResourceMock->shouldReceive('make')
+        ->once()
+        ->with($mockClassroom)
+        ->andReturn($mockResourceResult);
+
+    // Controller anonim, DI model mock
+    $controller = new class($classRoomModelMock) {
+        protected $classRoom;
+
+        public function __construct($classRoom)
+        {
+            $this->classRoom = $classRoom;
+        }
+
+        public function show($id)
+        {
+            $classRoom = $this->classRoom->where('id', $id)->first();
+
+            if (!$classRoom) {
+                return response()->json([
+                    'errors' => [
+                        "message" => [
+                            "not found"
+                        ]
+                    ]
+                ], 404);
+            }
+
+            // Gunakan method statis ClassRoomResource::make()
+            return response()->json([
+                'data' => \App\Http\Resources\ClassRoomResource::make($classRoom)
+            ], 200);
+        }
+    };
+
+    // Eksekusi controller
+    $response = $controller->show($mockId);
+
+    // Assert
+    $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $response);
+    $this->assertEquals(200, $response->getStatusCode());
+    $responseData = $response->getData(true);
+    $this->assertEquals(['id' => 1, 'name' => 'Kelas A'], $responseData['data']);
+}
+
+public function test_show_classroom_not_found()
+{
+    $mockId = 99;
+
+    // Query builder mock untuk where()->first() return null
+    $queryBuilderMock = Mockery::mock();
+    $queryBuilderMock->shouldReceive('first')->once()->andReturn(null);
+
+    // Mock model ClassRoom
+    $classRoomModelMock = Mockery::mock();
+    $classRoomModelMock->shouldReceive('where')
+        ->once()
+        ->with('id', $mockId)
+        ->andReturn($queryBuilderMock);
+
+    // Tidak perlu mock resource, karena resource tidak akan dipanggil jika data null
+
+    // Controller
+    $controller = new class($classRoomModelMock) {
+        protected $classRoom;
+        public function __construct($classRoom)
+        {
+            $this->classRoom = $classRoom;
+        }
+        public function show($id)
+        {
+            $classRoom = $this->classRoom->where('id', $id)->first();
+
+            if (!$classRoom) {
+                return response()->json([
+                    'errors' => [
+                        "message" => [
+                            "not found"
+                        ]
+                    ]
+                ], 404);
+            }
+
+            // Tidak akan dieksekusi jika data null
+            return response()->json([
+                'data' => \App\Http\Resources\ClassRoomResource::make($classRoom)
+            ], 200);
+        }
+    };
+
+    // Jalankan controller
+    $response = $controller->show($mockId);
+
+    // Assert
+    $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $response);
+    $this->assertEquals(404, $response->getStatusCode());
+
+    $responseData = $response->getData(true);
+    $this->assertSame([
+        'errors' => [
+            "message" => [
+                "not found"
+            ]
+        ]
+    ], $responseData);
+}
+
+public function test_show_classroom_without_id()
+{
+    // Model dan resource tetap di-mock walaupun tidak akan dipakai
+    $classRoomModelMock = Mockery::mock();
+
+    // Controller
+    $controller = new class($classRoomModelMock) {
+        protected $classRoom;
+        public function __construct($classRoom)
+        {
+            $this->classRoom = $classRoom;
+        }
+        // Tergantung logic-mu: jika parameter tidak diberikan, error manual
+        public function show($id = null)
+        {
+            if (empty($id)) {
+                return response()->json([
+                    'errors' => [
+                        "message" => [
+                            "id is required"
+                        ]
+                    ]
+                ], 400);
+            }
+
+            // Perilaku lain (tidak terpakai di test ini)
+        }
+    };
+
+    // Jalankan tanpa id (null)
+    $response = $controller->show(null);
+
+    // Assert: sesuai error yg diharapkan
+    $this->assertInstanceOf(\Illuminate\Http\JsonResponse::class, $response);
+    $this->assertEquals(400, $response->getStatusCode());
+
+    $responseData = $response->getData(true);
+    $this->assertSame([
+        'errors' => [
+            "message" => [
+                "id is required"
+            ]
+        ]
+    ], $responseData);
+}
 
 5. Gunakan use Tests\\TestCase dan import TestCase pada bagian atas kode test.
 6. Perhatikan penggunaan tanda ::, sebaiknya mengikuti contoh berikut:
-    
-    $classRoomModelMock = Mockery::mock();
+$classRoomModelMock = Mockery::mock();
 
-    Auth::shouldReceive('check')
-            ->once()
-            ->andReturn(false);
-
-
-    Untuk mock jangan menggunakan :: tetapi gunakan ->, berikut contohnya:
-    $classRoomResourceMock->shouldReceive('make')
-            ->once()
-            ->with($mockClassroom)
-            ->andReturn($mockResourceResult);
-
-    $queryBuilderMock->shouldReceive('first')->once()->andReturn($mockClassroom);
+Auth::shouldReceive('check')
+        ->once()
+        ->andReturn(false);
 
 
-    $classRoomResourceMock->shouldReceive('collection')
-            ->once()
-            ->with($mockClassrooms)
-            ->andReturn($mockResourceCollection);
+Untuk mock jangan menggunakan :: tetapi gunakan ->, berikut contohnya:
+$classRoomResourceMock->shouldReceive('make')
+        ->once()
+        ->with($mockClassroom)
+        ->andReturn($mockResourceResult);
+
+$queryBuilderMock->shouldReceive('first')->once()->andReturn($mockClassroom);
+
+
+$classRoomResourceMock->shouldReceive('collection')
+        ->once()
+        ->with($mockClassrooms)
+        ->andReturn($mockResourceCollection);
                         `;
                         break;
                     default:
@@ -910,7 +1232,7 @@ void main() {
 
         try {
             const response = await openai.chat.completions.create({
-                model: 'gpt-4.1',
+                model: 'gpt-4o',
                 messages: [
                     { role: 'user', content: prompt }
                 ],
@@ -920,7 +1242,7 @@ void main() {
             const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
 
             vscode.window.showInformationMessage('Sedang membuat file unit test!');
-            temporary.createTemporaryFile({ selectedText: code, unitTestCode: cleanResponse, framework: framework, context:context});
+            temporary.createTemporaryFile({ selectedText: code, unitTestCode: cleanResponse, framework: framework, context: context });
         } catch (error) {
             vscode.window.showErrorMessage(`Terjadi error ${error.message}`);
         }
