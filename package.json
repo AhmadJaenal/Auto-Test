@@ -1,6 +1,7 @@
 {
   "name": "auto-unit-test",
   "displayName": "Auto Unit Test",
+  "publisher": "jeeDev",
   "description": "For generate unit test",
   "version": "0.0.1",
   "engines": {
@@ -31,12 +32,12 @@
         "title": "CyberTest: Test Function"
       },
       {
-        "command": "auto-unit-test.runUnitTest",
-        "title": "CyberTest: Menjalankan Unit Test"
+        "command": "auto-unit-test.testApiController",
+        "title": "CyberTest: Test API Function"
       },
       {
         "command": "auto-unit-test.updateApiKey",
-        "title": "CyberTest: Perbaharui Key"
+        "title": "CyberTest: Perbaharui Key Website CyberTest"
       },
       {
         "command": "auto-unit-test.deleteKey",
@@ -65,5 +66,9 @@
     "auto-unit-test": "file:",
     "axios": "^1.7.9",
     "dotenv": "^16.4.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AhmadJaenal/Auto-Test.git"
   }
 }
