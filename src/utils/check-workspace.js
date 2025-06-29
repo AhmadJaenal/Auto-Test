@@ -15,7 +15,7 @@ class WorkspaceChecker {
 
             switch(fileExtension) {
                 case '.dart':
-                    return 'fluter';
+                    return 'flutter';
                 case '.php':
                     return 'laravel';
                 default:

@@ -1,10 +1,18 @@
 const vscode = require('vscode');
 const { OpenAI } = require('openai');
+const ApiKeyHandler = require('../module-test/api/api-key-handler');
 
 class ReportService {
-    async generateUnitTestReport(code, resultUnitTest) {
+    async generateUnitTestReport(code, resultUnitTest, context) {
+        const apiKeyHandler = new ApiKeyHandler();
+        const apiKey = await apiKeyHandler.getOpenAIKey(context);
+        if (!apiKey) {
+            vscode.window.showInformationMessage('API Key OpenAI belum dipasang. Silakan pasang API Key terlebih dahulu.');
+            return;
+        }
+
         const openai = new OpenAI({
-            apiKey: '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'
+            apiKey: apiKey
         });
 
         const prompt = `
@@ -16,31 +24,26 @@ class ReportService {
         Kode tersebut telah melalui proses pengujian, dan berikut adalah hasil dari unit test yang dijalankan:
         ${resultUnitTest}
 
-        Tugas Anda adalah:
-
+        Tugas:
         1. Menganalisis kode program berdasarkan best practice pemrograman dan keterbacaan.
-        2. Menganalisis hasil unit test: apakah pengujian mencakup kasus yang tepat, dan apakah hasilnya sesuai harapan.
-        3. Mengidentifikasi kelemahan pada kode program dan/atau hasil pengujiannya.
-        4. Memberikan rekomendasi perbaikan yang konkret dan teknis, baik pada sisi kode maupun pengujian.
+        2. Menganalisis kesalahan logika atau potensi bug dalam kode tersebut.
+        3. Menganalisis hasil unit test: apakah pengujian mencakup kasus yang tepat, dan apakah hasilnya sesuai harapan.
+        4. Mengidentifikasi kelemahan pada kode program dan/atau hasil pengujiannya.
+        6. Memberikan rekomendasi perbaikan yang konkret dan teknis, baik pada sisi kode maupun pengujian.
 
         Format laporan yang harus Anda gunakan:
-
-        1. Ringkasan Eksekutif
-        Berikan ringkasan singkat mengenai status kode dan pengujian.
-
-        2. Analisis Kode
-        Jelaskan kualitas kode, potensi bug, readability, dan kemungkinan improvement.
-
-        3. Analisis Hasil Unit Test
-        Tinjau cakupan test, validitas, serta hasil yang dicapai.
-
-        4. Rekomendasi Perbaikan
-        Berikan saran teknis yang jelas, disertai justifikasi. Bila perlu, sertakan contoh perbaikan kode.
-
-        5. Kesimpulan
-        Simpulkan apakah kode tersebut dapat dianggap stabil/siap digunakan atau memerlukan revisi lebih lanjut.
+        1. Berikan ringkasan singkat mengenai status kode dan pengujian.
+        2. Jelaskan kualitas kode, potensi bug, readability, dan kemungkinan improvement.
+        3. Analisis hasil unit test, validitas, serta hasil yang dicapai.
+        4. Berikan saran teknis yang jelas, disertai justifikasi. Bila perlu, sertakan contoh perbaikan kode.
+        5. Simpulkan apakah kode tersebut dapat dianggap stabil/siap digunakan atau memerlukan revisi lebih lanjut.
 
         Gunakan gaya bahasa profesional dan langsung pada poin, dengan fokus pada kualitas dan kejelasan analisis.
+
+
+        ATURAN & FORMAT:
+        1. Berikan jawaban tanpa tambahan katakter *-# dan lainya
+        2. Tulisan menggunakan ukuran font yang sama
         `;
         const response = await openai.chat.completions.create({
             model: 'gpt-4.1',
@@ -53,8 +56,8 @@ class ReportService {
         const report = response.choices[0].message.content;
 
         const panel = vscode.window.createWebviewPanel(
-            'sampleWebview',
-            'My Webview Panel',
+            'CyberTest',
+            'CyberTest',
             vscode.ViewColumn.One,
             {
                 enableScripts: true,
@@ -115,30 +118,34 @@ class ReportService {
             <div class="report-container">
                 ${report}
             </div>
-
-            <button onclick="sayHello()">Klik Saya</button>
-
-            <script>
-                function sayHello() {
-                alert("Hello from inside Webview!");
-                }
-            </script>
             </body>
             </html>
         `;
         }
     }
 
-    async redirectToWeb(resultUnitTest) {
+    static calculateGrade(testResult) {
+        const regex = /(\d+)\s+passed/;
+        const passedMatch = testResult.match(regex);
+
+        const failedRegex = /(\d+)\s+failed/;
+        const failedMatch = testResult.match(failedRegex);
+
+        const passedCount = passedMatch ? parseInt(passedMatch[1], 10) : 0;
+        const failedCount = failedMatch ? parseInt(failedMatch[1], 10) : 0;
+
+        const totalTests = failedCount + passedCount;
+        const score = totalTests > 0 ? Math.round((passedCount / totalTests) * 100) : 0;
+
+        return score;
+    }
+
+    async redirectToWeb(code, resultUnitTest) {
         const report = `
             <h2><strong>LAPORAN HASIL KINERJA PENGEMBANGAN FITUR [Nama Fitur]</strong></h2>
             <h2>
-                <strong>Nomor Dokumen:</strong> [Isi Nomor Dokumen] <br>
-                <strong>Tanggal:</strong> [Isi Tanggal] <br>
-                <strong>Nama Pengembang:</strong> [Isi Nama] <br>
-                <strong>Divisi:</strong> [Isi Divisi] <br>
+                <strong>Nama:</strong> [Isi Nama] <br>
                 <strong>Proyek:</strong> [Nama Proyek/Aplikasi] <br>
-                <strong>Versi:</strong> [Versi Aplikasi/Fitur] <br>
                 <strong>Teknologi yang Digunakan:</strong> [Isi Teknologi]
             </h2>
             <br>
@@ -161,60 +168,19 @@ class ReportService {
             <br>
 
             <h2><strong>3. IMPLEMENTASI TEKNIS</strong></h2>
-            <p>Bagian ini menjelaskan detail teknis implementasi, termasuk cuplikan kode yang dibuat.</p>
+            <p>Bagian ini menjelaskan detail teknis implementasi, termasuk kode yang dibuat.</p>
 
-            <h3><strong>3.1. Kode Implementasi</strong></h3>
             <p>📌 Tambahkan bagian ini sesuai dengan kode yang digunakan dalam fitur.</p>
 
-            <h4>📌 Kode Registrasi Pengguna (<code>authController.js</code>)</h4>
-            <pre>
-                <code>
-                    // Contoh kode registrasi pengguna
-                    const bcrypt = require('bcrypt');
-                    const User = require('../models/User');
-
-                    exports.register = async (req, res) => {
-                        const { email, password } = req.body;
-                        const hashedPassword = await bcrypt.hash(password, 10);
-                        const user = await User.create({ email, password: hashedPassword });
-
-                        res.status(201).json({ message: "Registrasi berhasil", user });
-                    };
-                </code>
-            </pre>
+            ${code}
             <br>
 
-            <h2><strong>4. PENGUJIAN UNIT TEST</strong></h2>
-            <p>Bagian ini berisi pengujian fitur yang telah dikembangkan.</p>
-
-            <h3><strong>4.1. Kode Pengujian</strong></h3>
-            <p>📌 Tambahkan kode unit test yang digunakan</p>
-            <pre>
-                <code>
-                    // Contoh kode pengujian unit menggunakan Jest
-                    const request = require('supertest');
-                    const app = require('../app');
-
-                    describe("Testing Registrasi Pengguna", () => {
-                        it("Registrasi sukses dengan data valid", async () => {
-                            const response = await request(app)
-                                .post('/api/auth/register')
-                                .send({ email: "test@example.com", password: "password123" });
-
-                            expect(response.status).toBe(201);
-                            expect(response.body.message).toBe("Registrasi berhasil");
-                        });
-                    });
-                </code>
-            </pre>
-            <br>
-
-            <h2><strong>5. HASIL PENGUJIAN</strong></h2>
+            <h2><strong>4. HASIL PENGUJIAN</strong></h2>
             <p>Bagian ini berisi tabel hasil pengujian.</p>
             ${resultUnitTest}
             <br>
 
-            <h2><strong>6. ANALISIS DAN EVALUASI</strong></h2>
+            <h2><strong>5. ANALISIS DAN EVALUASI</strong></h2>
             <p>Bagian ini menganalisis hasil pengujian dan memberikan insight lebih lanjut.</p>
 
             <p>✏️ <strong>Contoh Pengisian:</strong></p>
@@ -227,9 +193,20 @@ class ReportService {
             </ul>
         `;
 
+        const grade = ReportService.calculateGrade(resultUnitTest);
+        vscode.window.showInformationMessage(`Nilai yang didapat ${grade}`);
+
+        const apiKeyHandler = new ApiKeyHandler();
+        const key = await apiKeyHandler.getKeyWeb();
+        if (!key) {
+            vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API key terlebih dahulu');
+            return;
+        }
+
         const data = {
-            apiKey: 'e2714f8565f136bef2e499f68df3b434f785a4c5fc6f25b07168968b69ce3f14',
-            report: report
+            apiKey: key,
+            report: report,
+            grade: grade
         };
 
         const url = `http://127.0.0.1:8000/buat-laporan?&${new URLSearchParams(data).toString()}`;

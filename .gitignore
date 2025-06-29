@@ -3,3 +3,8 @@ node_modules
 *.vsix
 .env
 .qodo
+node_modules/**
+!node_modules/dependency-yang-dibutuhkan
+src/
+test/
+.git/

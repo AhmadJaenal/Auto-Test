@@ -8,6 +8,7 @@ const PathImportDart = require('../module-test/flutter/get-path-import');
 const ApiKeyHandler = require('../module-test/api/api-key-handler');
 const MigrationProcessor = require('../module-test/laravel/migration/migration-processor');
 const OutputChannelChecker = require('../../utils/check-ouput');
+const GetViews = require('../module-test/laravel/view/get-view');
 
 class CodeSelector {
     static isFunctionDart(code) {
@@ -58,10 +59,11 @@ class CodeSelector {
         return [...new Set(models)];
     }
 
-    async selectCode({ isApiController = false }) {
+    async selectCode({ isApiController = false, context }) {
         const migrationProcessor = new MigrationProcessor();
         const apiKeyHandler = new ApiKeyHandler();
-        const keyIsReady = await apiKeyHandler.checkKey();
+        const keyIsReady = await apiKeyHandler.getKeyWeb();
+        const getViews = new GetViews();
 
         if (keyIsReady === false) {
             vscode.window.showErrorMessage('API KEY belum ada, silakan masukkan API KEY terlebih dahulu');
@@ -91,6 +93,7 @@ class CodeSelector {
         const isFunction = CodeSelector.isFunctionLaravel(selectedText);
 
         outputChannelChecker.showOutputChannel();
+        vscode.window.showInformationMessage(`Framework yang digunakan: ${framework}`);
 
         switch (framework) {
             case 'laravel':
@@ -98,10 +101,11 @@ class CodeSelector {
                     if (isFunction) {
                         const modelName = CodeSelector.getUsedModels(selectedText);
                         const modelMigrationPairs = await migrationProcessor.getFileNameMigration(modelName);
+                        const resultView = getViews.readFileController(selectedText);
 
                         const atribut = await Promise.all(modelMigrationPairs.map(pair => migrationProcessor.readMigrationFiles(pair.file)));
 
-                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: framework });
+                        createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: framework, context: context, views: resultView });
                         vscode.window.showInformationMessage(`Sedang membuat kode unit test!`);
                     }
 
@@ -110,12 +114,12 @@ class CodeSelector {
                         return;
                     }
                 }
-
+                
                 if (isApiController) {
                     const attributesResource = resourceProcessor.readResourceFile(selectedText);
                     const attributesRequest = requestProcessor.readRequestFile(selectedText);
-
-                    createUnitTest.generateUnitTest({ code: selectedText, resource: attributesResource, request: attributesRequest, type: "api function", framework: framework });
+                    
+                    createUnitTest.generateUnitTest({ code: selectedText, resource: attributesResource, request: attributesRequest, type: "api function", framework: framework, context: context });
                 }
                 break;
             case 'flutter':

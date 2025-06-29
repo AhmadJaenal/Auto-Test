@@ -3,11 +3,10 @@ const vscode = require('vscode');
 const ApiKeyHandler = require('./commands/module-test/api/api-key-handler');
 const CodeSelector = require('./commands/selector/code-selector');
 const UnitTestManager = require('./commands/module-test/auto-test/unit-test-manager');
+// 
 /**
  * @param {vscode.ExtensionContext} context
  */
-
-
 class Main {
     constructor(context) {
         this.context = context;
@@ -23,19 +22,19 @@ class Main {
         });
 
         this.register('auto-unit-test.testController', async () => {
-            this.codeSelector.selectCode({ isApiController: false});
+            this.codeSelector.selectCode({ isApiController: false, context: this.context });
         });
 
         this.register('auto-unit-test.testApiController', async () => {
-            this.codeSelector.selectCode({ isApiController: true});
-        });
-
-        this.register('auto-unit-test.runUnitTest', () => {
-            this.unitTestManager.runUnitTest();
+            this.codeSelector.selectCode({ isApiController: true, context: this.context });
         });
 
         this.register('auto-unit-test.deleteKey', () => {
             this.apiKeyHandler.deleteKey();
+        });
+
+        this.register('auto-unit-test.inputKeyOpenAI', () => {
+            this.apiKeyHandler.inputKeyOpenAI(this.context);
         });
     }
 

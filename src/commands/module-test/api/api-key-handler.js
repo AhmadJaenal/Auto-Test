@@ -9,12 +9,11 @@ class ApiKeyHandler {
         if (key) {
             this.checkInputKey(key);
         } else {
-            vscode.window.showErrorMessage('API KEY wajib ada');
+            vscode.window.showErrorMessage('Tidak ada key yang dimasukan');
         }
     }
-    
-    async checkInputKey(key) {
 
+    async checkInputKey(key) {
         try {
             const response = await fetch('http://localhost:8000/api/check-key', {
                 method: 'GET',
@@ -38,23 +37,56 @@ class ApiKeyHandler {
             vscode.window.showErrorMessage('Terjadi kesalahan, silakan coba lagi nanti');
         }
     }
-    
+
     async updateKey(key) {
         const config = vscode.workspace.getConfiguration('auto-unit-test');
         await config.update('apiKey', key, vscode.ConfigurationTarget.Global);
         vscode.window.showInformationMessage('API KEY berhasil disimpan!');
     }
 
-    async checkKey() {
+    async getKeyWeb() {
         const config = vscode.workspace.getConfiguration('auto-unit-test');
         let apiKey = config.get('apiKey');
-        return apiKey !== ' ';
+        return apiKey;
     }
 
     async deleteKey() {
         const config = vscode.workspace.getConfiguration('auto-unit-test');
         await config.update('apiKey', ' ', vscode.ConfigurationTarget.Global);
         vscode.window.showInformationMessage('API KEY berhasil dihapus!');
+    }
+
+
+    async inputKeyOpenAI(context) {
+        const key = await vscode.window.showInputBox({
+            placeHolder: 'Masukan key Open AI',
+            prompt: 'Key Open AI wajib diisi'
+        }
+        );
+
+        if (key) {
+            ApiKeyHandler.saveOpenAIKey({ context: context, key: key });
+        }
+        else {
+            vscode.window.showInformationMessage('API Key Open AI wajib diisi');
+        }
+    }
+
+    static async saveOpenAIKey({ context, key }) {
+        const secretStorage = context.secrets;
+        await secretStorage.store('openAIKey', key);
+        vscode.window.showInformationMessage('API KEY berhasil disimpan!');
+    }
+
+    async getOpenAIKey(context) {
+        const secretStorage = context.secrets;
+        const key = await secretStorage.get('openAIKey');
+        if (key) {
+            return key;
+        } else {
+            vscode.window.showInformationMessage('API Key Open AI tidak ditemukan, silakan masukkan kembali.');
+            return null;
+        }
     }
 }
 
