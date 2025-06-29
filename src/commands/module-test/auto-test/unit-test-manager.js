@@ -52,12 +52,12 @@ class UnitTestManager {
                 const report = new ReportService();
                 const output = stdout + stderr;
 
-                // if (output) {
-                //     report.generateUnitTestReport(code, output, context);
-                //     vscode.window.showInformationMessage('Membuat laporan unit test...');
-                // }
+                if (output) {
+                    report.generateUnitTestReport(code, output, context);
+                    vscode.window.showInformationMessage('Membuat laporan unit test...');
+                }
 
-                // report.redirectToWeb(code, output);
+                report.redirectToWeb(code, output);
 
                 vscode.window.showInformationMessage('Proses unit test selesai');
             });
