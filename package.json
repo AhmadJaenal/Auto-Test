@@ -1,9 +1,10 @@
 {
   "name": "auto-unit-test",
-  "displayName": "Auto Unit Test",
-  "publisher": "jeeDev",
+  "displayName": "CyberTest-Auto Unit Test",
+  "publisher": "JeeeDev",
   "description": "For generate unit test",
-  "version": "0.0.1",
+  "version": "0.0.3",
+  "icon": "assets/logo.png",
   "engines": {
     "vscode": "^1.95.0"
   },
@@ -13,7 +14,7 @@
   "activationEvents": [
     "onLanguage:php"
   ],
-  "main": "src/extension.js",
+  "main": "./out/extension.js",
   "contributes": {
     "configuration": {
       "type": "object",
@@ -52,7 +53,8 @@
   "scripts": {
     "lint": "eslint .",
     "pretest": "npm run lint",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "build": "esbuild src/extension.js --bundle --platform=node --outfile=out/extension.js --external:vscode"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.9",
@@ -60,6 +62,7 @@
     "@types/vscode": "^1.95.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
+    "esbuild": "^0.25.5",
     "eslint": "^9.13.0"
   },
   "dependencies": {
