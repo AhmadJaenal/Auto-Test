@@ -3,7 +3,7 @@
   "displayName": "CyberTest-Auto Unit Test",
   "publisher": "JeeeDev",
   "description": "For generate unit test",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "icon": "assets/logo.png",
   "engines": {
     "vscode": "^1.95.0"
