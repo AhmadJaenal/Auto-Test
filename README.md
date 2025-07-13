@@ -31,17 +31,17 @@ Gunakan API key yang tersedia di halaman profil Anda pada **Website CyberTest**.
 
 📸 **Contoh Halaman Profil:**
 
-<img src="assets/img_user_profile.png" width="300">
+<img src="https://raw.githubusercontent.com/ahmadjaenal/Auto-Test/master/assets/img_user_profile.png" width="300">
 
 ---
 
 ### 2. 🧪 Otomatisasi Unit Test
 
-Lakukan seleksi pada bagian kode yang ingin diuji secara otomatis.
+Lakukan seleksi pada bagian kode yang ingin diuji secara otomatis. Kode yang bisa di buatkan kode ujinya hanya function.
 
 📸 **Contoh Seleksi Kode:**
 
-<img src="assets/img_seleksi_code.png" width="300">
+<img src="https://raw.githubusercontent.com/ahmadjaenal/Auto-Test/master/assets/img_seleksi_code.png" width="300">
 
 ---
 
@@ -51,7 +51,7 @@ Tekan `Ctrl + Shift + P`, lalu ketik dan pilih fitur yang ingin dijalankan dari 
 
 📸 **Contoh Menu Ekstensi:**
 
-<img src="assets/img_ekstensi.png" width="300">
+<img src="https://raw.githubusercontent.com/ahmadjaenal/Auto-Test/master/assets/img_ekstensi.png" width="300">
 
 ---
 

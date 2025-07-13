@@ -15,13 +15,15 @@ class ApiKeyHandler {
 
     async checkInputKey(key) {
         try {
-            const response = await fetch('http://localhost:8000/api/check-key', {
+            const response = await fetch('https://ahmadjaenal.web.id/api/check-key', {
                 method: 'GET',
                 headers: {
                     'X-API-Key': key,
                     'Content-Type': 'application/json'
                 }
             });
+
+            vscode.window.showInformationMessage(`${key} sedang diperiksa...`);
 
             if (response.status == 200) {
                 await this.updateKey(key);
@@ -34,7 +36,8 @@ class ApiKeyHandler {
                 vscode.window.showInformationMessage('Terjadi kesalahan');
             }
         } catch (error) {
-            vscode.window.showErrorMessage('Terjadi kesalahan, silakan coba lagi nanti');
+            vscode.window.showErrorMessage(`Terjadi error: ${error}`);
+            // vscode.window.showErrorMessage('Terjadi kesalahan, silakan coba lagi nanti');
         }
     }
 

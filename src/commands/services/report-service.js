@@ -209,7 +209,7 @@ class ReportService {
             grade: grade
         };
 
-        const url = `http://127.0.0.1:8000/buat-laporan?&${new URLSearchParams(data).toString()}`;
+        const url = `https://ahmadjaenal.web.id/buat-laporan?&${new URLSearchParams(data).toString()}`;
         await vscode.env.openExternal(vscode.Uri.parse(url));
     }
 }
