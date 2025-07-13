@@ -1244,7 +1244,7 @@ void main() {
             vscode.window.showInformationMessage('Sedang membuat file unit test!');
             temporary.createTemporaryFile({ selectedText: code, unitTestCode: cleanResponse, framework: framework, context: context });
         } catch (error) {
-            vscode.window.showErrorMessage(`Terjadi error ${error.message}`);
+            vscode.window.showErrorMessage(`API key yang Anda masukan tidak valid.`);
         }
     }
 

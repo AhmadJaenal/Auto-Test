@@ -3,7 +3,7 @@
   "displayName": "CyberTest-Auto Unit Test",
   "publisher": "JeeeDev",
   "description": "For generate unit test",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "icon": "assets/logo.png",
   "engines": {
     "vscode": "^1.95.0"
@@ -14,7 +14,7 @@
   "activationEvents": [
     "onLanguage:php"
   ],
-  "main": "./out/extension.js",
+  "main": "./src/extension.js",
   "contributes": {
     "configuration": {
       "type": "object",
