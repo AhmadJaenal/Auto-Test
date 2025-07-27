@@ -19,7 +19,6 @@ class PathImportDart {
     if (workspaceFolders && workspaceFolders.length > 0) {
       const projectRoot = workspaceFolders[0].uri.fsPath;
       const modelDir = path.join(projectRoot, 'lib/models/', `${modelName}.dart`);
-      vscode.window.showInformationMessage('Workspace path: ' + modelDir);
 
       try {
         const code = fs.readFileSync(modelDir, 'utf8');
