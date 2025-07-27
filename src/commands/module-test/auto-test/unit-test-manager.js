@@ -5,7 +5,7 @@ const ApiKeyHandler = require('../api/api-key-handler');
 const OutputChannelChecker = require('../../../utils/check-ouput');
 
 class UnitTestManager {
-    async runUnitTest(code, context, framework) {
+    async runUnitTest(code, context, framework, unitTestCode) {
         const apiKeyHandler = new ApiKeyHandler();
         const outputChannelChecker = new OutputChannelChecker('CyberTest - Unit Test');
 
@@ -53,11 +53,11 @@ class UnitTestManager {
                 const output = stdout + stderr;
 
                 if (output) {
-                    report.generateUnitTestReport(code, output, context);
+                    report.generateUnitTestReport(code, output, context, framework, unitTestCode);
                     vscode.window.showInformationMessage('Membuat laporan unit test...');
                 }
 
-                report.redirectToWeb(code, output);
+                report.redirectToWeb(code, output, framework);
 
                 vscode.window.showInformationMessage('Proses unit test selesai');
             });
