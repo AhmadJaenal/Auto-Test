@@ -12,10 +12,9 @@ const GetViews = require('../module-test/laravel/view/get-view');
 
 class CodeSelector {
     static isFunctionDart(code) {
-        const functionPattern = /(\w+\s*\(.*?\)\s*{)/g;
+        const functionPattern = /^\s*(?:\w+<.*?>\s+)?\w+\s*\(.*?\)\s*(async\s*)?{/gm;
         return functionPattern.test(code);
     }
-
     static getModelInFunction(code) {
         const modelPattern = /(\b\w+)\s*\.fromJson\s*\(/g;
         const match = modelPattern.exec(code);
@@ -91,6 +90,7 @@ class CodeSelector {
 
         const selectedText = editor.document.getText(selection);
         const isFunction = CodeSelector.isFunctionLaravel(selectedText);
+        const isFunctionDart = CodeSelector.isFunctionDart(selectedText)
 
         outputChannelChecker.showOutputChannel();
         vscode.window.showInformationMessage(`Framework yang digunakan: ${framework}`);
@@ -106,7 +106,6 @@ class CodeSelector {
                         const atribut = await Promise.all(modelMigrationPairs.map(pair => migrationProcessor.readMigrationFiles(pair.file)));
 
                         createUnitTest.generateUnitTest({ code: selectedText, modelName: modelName, attributeMigration: atribut, type: 'function', framework: framework, context: context, views: resultView });
-                        vscode.window.showInformationMessage(`Sedang membuat kode unit test!`);
                     }
 
                     if (!isFunction) {
@@ -114,26 +113,30 @@ class CodeSelector {
                         return;
                     }
                 }
-                
+
                 if (isApiController) {
                     const attributesResource = resourceProcessor.readResourceFile(selectedText);
                     const attributesRequest = requestProcessor.readRequestFile(selectedText);
-                    
+
                     createUnitTest.generateUnitTest({ code: selectedText, resource: attributesResource, request: attributesRequest, type: "api function", framework: framework, context: context });
                 }
                 break;
             case 'flutter':
-                if (CodeSelector.isFunctionDart(selectedText)) {
+                if (isFunctionDart) {
                     const pathImport = new PathImportDart();
 
                     const modelName = CodeSelector.getModelInFunction(selectedText);
+
                     try {
                         const code = pathImport.readFileModel(modelName);
                         const attributes = pathImport.getAtributModel(code);
-                        createUnitTest.generateUnitTest({ code: selectedText, attributesModelDart: attributes, type: "dart function", framework: framework });
+                        vscode.window.showInformationMessage('Request membuat kode unit test');
+                        createUnitTest.generateUnitTest({ code: selectedText, attributesModelDart: attributes, type: "dart function", framework: framework,  context: context  });
                     } catch (error) {
                         vscode.window.showErrorMessage(`terjadi kesalahan ${error}`);
                     }
+                } else {
+                    vscode.window.showErrorMessage(`Kode program yang dipilih bukan merupakan fungsi dalam controller`);
                 }
                 break;
             default:
