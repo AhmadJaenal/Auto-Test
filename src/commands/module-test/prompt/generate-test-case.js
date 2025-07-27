@@ -25,10 +25,10 @@ class GenerateTestModule {
                 switch (type) {
                     case 'function':
                         prompt = ` 
-Anda adalah seorang SOFTWARE TESTER profesional.
-Tugas Anda adalah membuat skenario uji dengan mencari kelemahan atau potensi bug(error) dari kode yang di uji kemudian membuatkan kode unit test-nya menggunakan Mockery, agar dapat dimengerti dan dijalankan oleh programmer pemula.
+Anda adalah seorang QA Engineer profesional.
+Tugas Anda adalah membuat skenario uji dengan mencari kelemahan atau potensi bug(error) dari kode yang di uji, kemudian buatkan kode unit test-nya menggunakan Mockery yang sederhana agar bisa dipahami oleh programmer pemula.
 
-Tujuan 
+TUGAS 
 Buat kode unit test terhadap potongan kode function controller di bawah ini.
 Kode yang harus diuji: ${code}
 
@@ -59,43 +59,42 @@ View::shouldReceive('make')
 $this->assertEquals('test_view', $response); 
 
 ATURAN MOCK:
-1. **Mock expectation (shouldReceive)**: Gunakan HANYA atribut dari migration: ${attributeMigration}
+1. **Mock expectation (shouldReceive)**: HANYA gunakan atribut dari migration: ${attributeMigration}
 2. **Mock controller class**: Salin persis kode asli tanpa perubahan apapun, termasuk typo dan kesalahan
+    Contoh Mock expectation yang BENAR:
+    $foodMock->shouldReceive('create')
+    ->withArgs(function ($input) {  
+        return $input['url_img'] === 'storage/image/123456.jpg' // Hanya gunakan atribut migration
+            && $input['food'] === $mockRequest->food  // Hanya gunakan atribut migration
+            && isset($input['created_at']);
+    })
 
-Contoh Mock expectation yang BENAR:
-$foodMock->shouldReceive('create')
-->withArgs(function ($input) {  
-    return $input['url_img'] === 'storage/image/123456.jpg' // Gunakan atribut migration (url_img), bukan dari kode (url_imf)
-        && $input['food'] === $mockRequest->food
-        && isset($input['created_at']);
-})
+    Contoh Mock dengan mengembalikan halaman yang benar
+    public function test_login_return_view()
+    {
+        View::shouldReceive('make')
+            ->once()
+            ->with('auth.login', [], []) 
+            // Jika nama view pada function TIDAK terdaftar pada sistem,
+            // maka parameter pada kode .with() HARUS dibuat berbeda dengan yang ada pada function yang akan diuji
+            // agar unit test gagal (mengindikasikan view salah).
+            // Sebaliknya, jika nama view pada function TERDAFTAR pada sistem,
+            // maka parameter pada .with() HARUS SAMA PERSIS agar unit test berhasil.
+            ->andReturn('test_view');
 
-Contoh Mock dengan mengembalikan halaman yang benar
-public function test_login_return_view()
-{
-    View::shouldReceive('make')
-        ->once()
-        ->with('auth.login', [], []) 
-        // Jika nama view pada controller TIDAK terdaftar di sistem,
-        // maka parameter di .with() HARUS dibuat berbeda dengan yang ada pada controller
-        // agar unit test gagal (mengindikasikan view salah).
-        // Sebaliknya, jika nama view pada controller TERDAFTAR di sistem,
-        // maka parameter di .with() HARUS SAMA PERSIS agar unit test berhasil.
-        ->andReturn('test_view');
+        // Mock Controller: salin PERSIS kode asli yang diuji, TIDAK boleh diperbaiki walau ada typo/kesalahan
+        $controller = new class {
+            public function about()
+            {
+                return view("landingPage.pages.about");
+            }
+        };
 
-    // Mock Controller: salin PERSIS kode asli yang diuji, TIDAK boleh diperbaiki walau ada typo/kesalahan
-    $controller = new class {
-        public function about()
-        {
-            return view("landingPage.pages.about");
-        }
-    };
+        $response = $controller->login();
 
-    $response = $controller->login();
-
-    // Assertion: pastikan hasil sama 'test_view' (dari mock View::make)
-    $this->assertEquals('test_view', $response);
-}
+        // Assertion: pastikan hasil sama 'test_view' (dari mock View::make)
+        $this->assertEquals('test_view', $response);
+    }
 
 ATURAN & FORMAT:
 1. Nama class test harus: TemporaryTest
@@ -103,9 +102,8 @@ ATURAN & FORMAT:
 3. Seluruh pengujian dibuat dalam bentuk fungsi-fungsi public function test_*()
 4. Jangan menyertakan komentar atau penjelasan — hanya kode PHP test lengkap
 5. Tidak perlu output tambahan apapun selain kode
-6. Pada saat membuat Mock kode yang akan di uji tidak boleh terdapat perubahan, harus sesuai dengan kode yang diterima 
 
-CAKUPAN TEST WAJIB (minimal 4 test jika memungkinkan):
+CAKUPAN TEST WAJIB (minimal 4 test jika memungkinkan) dan diperbolehkan lebih dari 4:
 1. Test berhasil menambahkan data pada database
 2. Test gagal menyimpan data (misalnya karena save() tidak dipanggil atau return false)
 3. Test validasi error atau exception
@@ -121,253 +119,328 @@ KETENTUAN TAMBAHAN
     $validated['short_description'] = "lorem ipsum";
 
 3. Gunakan pattern dan struktur test seperti pada contoh di bawah ini
-STRUKTUR FILE
-Semua kode test harus berada dalam 1 file class berikut ini:
+    STRUKTUR FILE
+    Semua kode test harus berada dalam 1 file class berikut ini:
 
-<?php
-namespace Tests\\Feature;
+    <?php
+    namespace Tests\\Feature;
 
-use Tests\\TestCase;
-use Mockery;
-use Illuminate\\Support\\Facades\\Auth;
-use Illuminate\\Support\\Facades\\Redirect;
-use Illuminate\\Support\\Facades\\View;
+    use Tests\\TestCase;
+    use Mockery;
+    use Illuminate\\Support\\Facades\\Auth;
+    use Illuminate\\Support\\Facades\\Redirect;
+    use Illuminate\\Support\\Facades\\View;
 
-class TemporaryTest extends TestCase
-{
-    protected function tearDown(): void
+    class TemporaryTest extends TestCase
     {
-        Mockery::close();
-        parent::tearDown();
-    }
+        protected function tearDown(): void
+        {
+            Mockery::close();
+            parent::tearDown();
+        }
 
-    // Kode uji
-}
+        // Kode uji
+    }
 
 4. Kode yang dibuat mengikuti contoh-contoh unit test berikut
 
-// Test: Login dipanggil, return view login
-public function test_login_return_view()
-{
-    View::shouldReceive('make')
-        ->once()
-        ->with('auth.login', [], []) 
-        ->andReturn('test_view');
+    // Test: Login dipanggil, return view login
+    public function test_login_return_view()
+    {
+        View::shouldReceive('make')
+            ->once()
+            ->with('auth.login', [], []) 
+            ->andReturn('test_view');
 
-    $controller = new class {
-        public function about()
-        {
-            return view("landingPage.pages.about");
-        }
-    };
-
-    $response = $controller->login();
-    $this->assertEquals('test_view', $response);
-}
-
-// Test return view dengan alamat yang salah
-public function test_about_return_view_fail_wrong_view_name()
-{
-    View::shouldReceive('make')
-        ->once()
-        ->with('landingPage.pages.abaut', [], [])
-        ->andReturn('wrong_view');
-
-    $controller = new class {
-        public function about()
-        {
-            return view("landingPage.pages.about");
-        }
-    };
-
-    $result = $controller->about();
-
-    $this->assertEquals('wrong_view', $result);
-}
-
-// Test: User sudah login, redirect ke dashboard (berhasil login)
-public function test_login_user_already_logged_in_redirects_to_dashboard()
-{
-    // Mock Auth::check() return true
-    Auth::shouldReceive('check')
-        ->once()
-        ->andReturn(true);
-
-    // Mock Redirect::to('dashboard')
-    Redirect::shouldReceive('to')
-        ->with('dashboard')
-        ->andReturn('redirect_dashboard');
-
-    $controller = new class {
-        public function login() {
-            if (Auth::check()) {
-                return Redirect::to('dashboard');
-            } else {
-                return View::make('dashboard.pages.auth.login');
+        $controller = new class {
+            public function about()
+            {
+                return view("landingPage.pages.about");
             }
-        }
-    };
+        };
 
-    $result = $controller->login();
+        $response = $controller->login();
+        $this->assertEquals('test_view', $response);
+    }
 
-    $this->assertEquals('redirect_dashboard', $result);
-}
+    // Test return view dengan alamat yang salah
+    public function test_about_return_view_fail_wrong_view_name()
+    {
+        View::shouldReceive('make')
+            ->once()
+            ->with('landingPage.pages.abaut', [], [])
+            ->andReturn('wrong_view');
 
-// Test: User belum login, return view login (gagal login)
-public function test_login_user_not_logged_in_returns_login_view()
-{
-    // Mock Auth::check() return false
-    Auth::shouldReceive('check')
-        ->once()
-        ->andReturn(false);
-
-    // Mock View::make
-    View::shouldReceive('make')
-        ->with('dashboard.pages.auth.login')
-        ->andReturn('login_view');
-
-    $controller = new class {
-        public function login() {
-            if (Auth::check()) {
-                return Redirect::to('dashboard');
-            } else {
-                return View::make('dashboard.pages.auth.login');
+        $controller = new class {
+            public function about()
+            {
+                return view("landingPage.pages.about");
             }
-        }
-    };
+        };
 
-    $result = $controller->login();
+        $result = $controller->about();
 
-    $this->assertEquals('login_view', $result);
-}
+        $this->assertEquals('wrong_view', $result);
+    }
 
-// Test: login dipanggil tanpa parameter (tanpa parameter)
-public function test_login_without_parameters_works_well()
-{
-    Auth::shouldReceive('check')
-        ->once()
-        ->andReturn(false);
+    // Test: User sudah login, redirect ke dashboard (berhasil login)
+    public function test_login_user_already_logged_in_redirects_to_dashboard()
+    {
+        // Mock Auth::check() return true
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn(true);
 
-    View::shouldReceive('make')
-        ->with('dashboard.pages.auth.login')
-        ->andReturn('login_view');
+        // Mock Redirect::to('dashboard')
+        Redirect::shouldReceive('to')
+            ->with('dashboard')
+            ->andReturn('redirect_dashboard');
 
-    $controller = new class {
-        public function login() {
-            if (Auth::check()) {
-                return Redirect::to('dashboard');
-            } else {
-                return View::make('dashboard.pages.auth.login');
-            }
-        }
-    };
-
-    // Tidak ada parameter dikirim ke login()
-    $result = $controller->login();
-
-    $this->assertEquals('login_view', $result);
-}
-
-// Test: Untuk pengujian yang menggunakan database, gunakan Mockery untuk memmock Eloquent Model
-public function test_add_menu_success()
-{
-    // Buat mock request dengan method validate bawaan
-    // Atribut mock request harus mengikuti atribut yang terdapat pada validate dalam kode yang di uji, jika atribut tidak harus menyebabkan error
-    $mockRequest = new class {
-        public $image;
-        public $food;
-        public $desc;
-
-        public function __construct()
-        {
-            $this->image = new class {
-                public function extension()
-                {
-                    return 'jpg';
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
                 }
-                public function storeAs($folder, $name, $driver)
-                {
-                    return 'image/123456789.jpg';
+            }
+        };
+
+        $result = $controller->login();
+
+        $this->assertEquals('redirect_dashboard', $result);
+    }
+
+    // Test: User belum login, return view login (gagal login)
+    public function test_login_user_not_logged_in_returns_login_view()
+    {
+        // Mock Auth::check() return false
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn(false);
+
+        // Mock View::make
+        View::shouldReceive('make')
+            ->with('dashboard.pages.auth.login')
+            ->andReturn('login_view');
+
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
                 }
-            };
-            $this->food = 'Ayam Bakar';
-            $this->desc = 'Lezat dan gurih';
-        }
+            }
+        };
 
-        public function validate($rules)
-        {
-            // Simulasi validasi berhasil
-            return [
-                'image' => $this->image,
-                'food' => $this->food,
-                'desc' => $this->desc,
-            ];
-        }
-    };
+        $result = $controller->login();
 
-    // Mock Eloquent Model
-    $foodMock = Mockery::mock();
-    $foodMock->shouldReceive('create')
-        ->once()
-        ->withArgs(function ($input) use ($mockRequest) {
-            return $input['url_img'] === 'storage/image/123456789.jpg'
-                && $input['food_name'] === $mockRequest->food
-                && $input['desc'] === $mockRequest->desc
-                && isset($input['created_at'])
-                && isset($input['updated_at']);
-        })
-        ->andReturnTrue();
+        $this->assertEquals('login_view', $result);
+    }
 
-    // Mock Redirect
-    $mockRedirectResponse = Mockery::mock();
-    $mockRedirectResponse->shouldReceive('with')
-        ->with('success', 'Menu uploaded successfully.')
-        ->andReturn('redirect_success');
+    // Test: login dipanggil tanpa parameter (tanpa parameter)
+    public function test_login_without_parameters_works_well()
+    {
+        Auth::shouldReceive('check')
+            ->once()
+            ->andReturn(false);
 
-    Redirect::shouldReceive('back')->once()->andReturn($mockRedirectResponse);
+        View::shouldReceive('make')
+            ->with('dashboard.pages.auth.login')
+            ->andReturn('login_view');
 
-    // Controller anon class
-    $controller = new class($foodMock) {
-        protected $food;
-        public function __construct($food)
-        {
-            $this->food = $food;
-        }
+        $controller = new class {
+            public function login() {
+                if (Auth::check()) {
+                    return Redirect::to('dashboard');
+                } else {
+                    return View::make('dashboard.pages.auth.login');
+                }
+            }
+        };
 
-        public function addMenu($request)
-        {
-            $request->validate([
-                'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-                'food' => 'required|string|max:255',
-                'desc' => 'required|string',
-            ]);
+        // Tidak ada parameter dikirim ke login()
+        $result = $controller->login();
 
-            $imageName = time() . '.' . $request->image->extension();
-            $path = $request->image->storeAs('image', $imageName, 'public');
-            $imageUrl = "storage/" . $path;
+        $this->assertEquals('login_view', $result);
+    }
 
-            try {
-                $this->food->create([
-                    'url_img' => $imageUrl,
-                    'food_name' => $request->food, // Atribut $request->food seharusnya mengikuti atribut yang ada pada validate, jadi jika terdapat perbedaan unit test harus error
-                    'desc' => $request->desc,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+    // Test: Untuk pengujian yang menggunakan database, gunakan Mockery untuk memmock Eloquent Model
+    public function test_add_menu_success()
+    {
+        // Buat mock request dengan method validate bawaan
+        // Atribut mock request harus mengikuti atribut yang terdapat pada validate dalam kode yang di uji, jika atribut tidak harus menyebabkan error
+        $mockRequest = new class {
+            public $image;
+            public $food;
+            public $desc;
+
+            public function __construct()
+            {
+                $this->image = new class {
+                    public function extension()
+                    {
+                        return 'jpg';
+                    }
+                    public function storeAs($folder, $name, $driver)
+                    {
+                        return 'image/123456789.jpg';
+                    }
+                };
+                $this->food = 'Ayam Bakar';
+                $this->desc = 'Lezat dan gurih';
+            }
+
+            public function validate($rules)
+            {
+                // Simulasi validasi berhasil
+                return [
+                    'image' => $this->image,
+                    'food' => $this->food,
+                    'desc' => $this->desc,
+                ];
+            }
+        };
+
+        // Mock Eloquent Model
+        $foodMock = Mockery::mock();
+        $foodMock->shouldReceive('create')
+            ->once()
+            ->withArgs(function ($input) use ($mockRequest) {
+                return $input['url_img'] === 'storage/image/123456789.jpg'
+                    && $input['food_name'] === $mockRequest->food
+                    && $input['desc'] === $mockRequest->desc
+                    && isset($input['created_at'])
+                    && isset($input['updated_at']);
+            })
+            ->andReturnTrue();
+
+        // Mock Redirect
+        $mockRedirectResponse = Mockery::mock();
+        $mockRedirectResponse->shouldReceive('with')
+            ->with('success', 'Menu uploaded successfully.')
+            ->andReturn('redirect_success');
+
+        Redirect::shouldReceive('back')->once()->andReturn($mockRedirectResponse);
+
+        // Controller anon class
+        $controller = new class($foodMock) {
+            protected $food;
+            public function __construct($food)
+            {
+                $this->food = $food;
+            }
+
+            public function addMenu($request)
+            {
+                $request->validate([
+                    'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                    'food' => 'required|string|max:255',
+                    'desc' => 'required|string',
                 ]);
 
-                return Redirect::back()->with('success', 'Menu uploaded successfully.');
-            } catch (\Throwable $th) {
-                return Redirect::back()->with('failed', 'Failed to upload Menu.');
+                $imageName = time() . '.' . $request->image->extension();
+                $path = $request->image->storeAs('image', $imageName, 'public');
+                $imageUrl = "storage/" . $path;
+
+                try {
+                    $this->food->create([
+                        'url_img' => $imageUrl,
+                        'food_name' => $request->food, // Atribut $request->food seharusnya mengikuti atribut yang ada pada validate, jadi jika terdapat perbedaan unit test harus error
+                        'desc' => $request->desc,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    return Redirect::back()->with('success', 'Menu uploaded successfully.');
+                } catch (\Throwable $th) {
+                    return Redirect::back()->with('failed', 'Failed to upload Menu.');
+                }
             }
-        }
-    };
+        };
 
-    // Jalankan test
-    $result = $controller->addMenu($mockRequest);
+        // Jalankan test
+        $result = $controller->addMenu($mockRequest);
 
-    $this->assertEquals('redirect_success', $result);
-}
+        $this->assertEquals('redirect_success', $result);
+    }
 
+    // Test: Untuk pengujian yang menggunakan database, gunakan Mockery untuk memmock Eloquent Model
+    public function test_add_image_fail_to_save()
+    {
+        $mockRequest = new class {
+            public $image;
+
+            public function __construct()
+            {
+                $this->image = new class {
+                    public function extension()
+                    {
+                        return 'jpg';
+                    }
+                    public function storeAs($folder, $name, $driver)
+                    {
+                        return 'image/123456789.jpg';
+                    }
+                };
+            }
+
+            public function validate($rules)
+            {
+                return [
+                    'image' => $this->image,
+                ];
+            }
+        };
+
+        $galleryMock = Mockery::mock();
+        $galleryMock->shouldReceive('create')
+            ->once()
+            ->andThrow(new \Exception('Failed to save'));
+
+        $mockRedirectResponse = Mockery::mock();
+        $mockRedirectResponse->shouldReceive('with')
+            ->with('failed', 'Failed to upload image.')
+            ->andReturn('redirect_failed');
+
+        Redirect::shouldReceive('back')->once()->andReturn($mockRedirectResponse);
+
+        $controller = new class($galleryMock) {
+            protected $gallery;
+            public function __construct($gallery)
+            {
+                $this->gallery = $gallery;
+            }
+
+            public function addImage($request)
+            {
+                try {
+                    $request->validate([
+                        'image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:4000',
+                    ]);
+
+                    $imageName = time() . '.' . $request->image->extension();
+                    $path = $request->image->storeAs('image', $imageName, 'public');
+                    $imageUrl = "storage/" . $path;
+
+                    $this->gallery->create([
+                        'url_img' => $imageUrl,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+
+                    return Redirect::back()->with('success', 'Image uploaded successfully.');
+                } catch (\Throwable $th) {
+                    return Redirect::back()->with('failed', 'Failed to upload image.');
+                }
+            }
+        };
+
+        $result = $controller->addImage($mockRequest);
+
+        $this->assertEquals('redirect_failed', $result);
+    }
 
 5. Gunakan use Tests\\TestCase dan import TestCase pada bagian atas kode test.
 6. Perhatikan penggunaan tanda ::, sebaiknya mengikuti contoh berikut:
@@ -391,8 +464,8 @@ public function test_add_menu_success()
         ->andReturn('redirect_success');
 
 CATATAN TAMBAHAN
-Jika kode program yang di tes menggunakan library tambahan, maka buatkan helpernya. 
-Berikut contoh kode unit test dengan pembuatan helper
+Jika kode program yang di test menggunakan library tambahan, maka buatkan helpernya. 
+Berikut contoh kode unit test dengan pembuatan helper:
 public function test_authentication_successful_login_redirect_to_dashboard()
 {
     if (!function_exists('notify')) {
@@ -1231,21 +1304,46 @@ void main() {
         }
 
         try {
+            vscode.window.showInformationMessage(`Sedang membuat kode unit test...`);
+
             const response = await openai.chat.completions.create({
-                model: 'gpt-4o',
+                model: 'gpt-4.1',
                 messages: [
                     { role: 'user', content: prompt }
                 ],
                 temperature: 0.3
             });
 
-            const cleanResponse = GenerateTestModule.cleanApiResponse(response.choices[0].message.content);
+            const resultText = response.choices[0]?.message?.content;
 
-            vscode.window.showInformationMessage('Sedang membuat file unit test!');
-            temporary.createTemporaryFile({ selectedText: code, unitTestCode: cleanResponse, framework: framework, context: context });
+            if (!resultText) {
+                vscode.window.showErrorMessage('Tidak ada jawaban dari OpenAI.');
+                return;
+            }
+
+            const cleanResponse = GenerateTestModule.cleanApiResponse(resultText);
+
+            vscode.window.showInformationMessage('Sedang membuat file unit test...');
+
+            temporary.createTemporaryFile({
+                selectedText: code,
+                unitTestCode: cleanResponse,
+                framework: framework,
+                context: context
+            });
+
         } catch (error) {
-            vscode.window.showErrorMessage(`API key yang Anda masukan tidak valid.`);
+            if (error.status === 401 || error.status === 403) {
+                vscode.window.showErrorMessage('API key OpenAI tidak valid atau tidak diizinkan. Coba ganti key atau hubungi staf.');
+            } else if (error.status === 429) {
+                vscode.window.showErrorMessage('Terlalu banyak permintaan ke OpenAI. Coba lagi beberapa saat.');
+            } else if (error.status >= 500) {
+                vscode.window.showErrorMessage('OpenAI sedang mengalami gangguan. Silakan coba beberapa saat lagi.');
+            } else {
+                vscode.window.showErrorMessage(`Terjadi kesalahan: ${error.message}`);
+            }
         }
+
     }
 
     static cleanApiResponse(response) {
